@@ -20,5 +20,8 @@
   },
   "dependencies": {
     "cassandra-driver": "^3.0.1"
+  },
+  "devDependencies": {
+    "mocha": "^2.4.5"
   }
 }
