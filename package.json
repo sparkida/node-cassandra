@@ -1,0 +1,24 @@
+{
+  "name": "cassandra-orm",
+  "version": "0.0.1",
+  "description": "Cassandra ORM for NodeJS, built atop the Cassandra driver.",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vertebrae-org/cassandra-orm.git"
+  },
+  "keywords": [
+    "cassandra",
+    "orm"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vertebrae-org/cassandra-orm/issues"
+  },
+  "dependencies": {
+    "cassandra-driver": "^3.0.1"
+  }
+}
