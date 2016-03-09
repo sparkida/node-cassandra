@@ -19,9 +19,20 @@
     "url": "https://github.com/vertebrae-org/cassandra-orm/issues"
   },
   "dependencies": {
+    "async": "^1.5.2",
     "cassandra-driver": "^3.0.1"
   },
   "devDependencies": {
-    "mocha": "^2.4.5"
+    "coveralls": "^2.11.8",
+    "grunt": "^0.4.5",
+    "grunt-cli": "^0.1.13",
+    "grunt-contrib-jshint": "^1.0.0",
+    "grunt-contrib-watch": "^0.6.1",
+    "grunt-shell": "^1.2.1",
+    "istanbul": "^0.4.2",
+    "jit-grunt": "^0.10.0",
+    "jsdoc": "^3.4.0",
+    "mocha": "^2.4.5",
+    "time-grunt": "^1.3.0"
   }
 }
