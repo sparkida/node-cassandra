@@ -1,26 +1,46 @@
 var cassandra = require('../');
-console.log(cassandra);
-console.log(Object.keys(cassandra));
-var db = cassandra.connect({
-    contactPoints: ['127.0.0.1:9042'], 
-    protocolOptions: {port: 9042}
-});
 
-db.on('error', (err) => {
-    console.log(err);
-});
+describe('Cassandra', function (done) {
+    var db;
+    var TestSchema;
 
-db.on('connect', (res) => {
-    console.log(res);
-});
+    before((done) => {
+        db = cassandra.connect({
+            contactPoints: ['127.0.0.1:9042'], 
+            protocolOptions: {port: 9042},
+            keyspace: {
+                testKeyspace: {
+                    with_replication: {
+                        class: 'SimpleStrategy',
+                        replication_factor: 1
+                    }
+                }
+            }
+        });
+        db.on('error', done);
+        db.on('connect', done);
+    });
 
-var type = cassandra.types;
-var UserSchema = new cassandra.Schema({
-    username: 'text',
-    age: 'int'
-}, {
-    primaryKeys: ['username']
-});
 
-var UserModel = db.model('user', UserSchema);
-console.log(UserModel);
+    it ('should create a Schema object', () => {
+        //var type = cassandra.types;
+        var UserSchema = new cassandra.Schema({
+                username: 'text',
+                age: 'int'
+            }, {
+                primaryKeys: ['username'],
+                compoundKeys: ['username', 'age']
+            });
+
+        TestSchema = db.model('users', UserSchema);
+        console.log(TestSchema);
+    });
+
+    it.skip ('should be able to create keyspaces if they don\'t exist', () => {
+           
+    });
+
+    it.skip ('should be able to attach static methods', () => {
+    });
+
+});

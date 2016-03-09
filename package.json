@@ -4,7 +4,7 @@
   "description": "Cassandra ORM for NodeJS, built atop the Cassandra driver.",
   "main": "index.js",
   "scripts": {
-    "test": "npm test"
+    "test": "./node_modules/.bin/mocha --recursive --reporter spec --bail"
   },
   "repository": {
     "type": "git",
