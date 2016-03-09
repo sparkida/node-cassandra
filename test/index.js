@@ -1,42 +1,42 @@
-var cassandra = require('../');
+const assert = require('assert');
+const Cassandra = require('../');
 
 describe('Cassandra', function (done) {
-    var db;
-    var TestSchema;
-
     before((done) => {
-        db = cassandra.connect({
+        const cassandra = Cassandra.connect({
             contactPoints: ['127.0.0.1:9042'], 
             protocolOptions: {port: 9042},
-            keyspace: {
-                testKeyspace: {
-                    with_replication: {
+            keyspaces: {
+                testkeyspace: {
+                    'with replication': {
                         class: 'SimpleStrategy',
                         replication_factor: 1
-                    }
+                    },
+                    durable_writes: true
                 }
             }
         });
-        db.on('error', done);
-        db.on('connect', done);
+        cassandra.on('error', done);
+        cassandra.on('connect', done);
     });
 
 
     it ('should create a Schema object', () => {
         //var type = cassandra.types;
-        var UserSchema = new cassandra.Schema({
+        var UserSchema = new Cassandra.Schema({
                 username: 'text',
                 age: 'int'
             }, {
-                primaryKeys: ['username'],
-                compoundKeys: ['username', 'age']
+                primaryKeys: [['username'], 'age']
             });
 
-        TestSchema = db.model('users', UserSchema);
-        console.log(TestSchema);
+        assert(UserSchema instanceof Cassandra.Schema);
+        assert(UserSchema.fields);
+        assert(UserSchema.options);
+        assert(UserSchema.model);
     });
 
-    it.skip ('should be able to create keyspaces if they don\'t exist', () => {
+    it ('should be able to create keyspaces if they don\'t exist', () => {
            
     });
 
