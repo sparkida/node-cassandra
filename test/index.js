@@ -1,21 +1,25 @@
 const assert = require('assert');
 const Cassandra = require('../');
+const keyspaceName = 'testkeyspace';
+const keyspaceConfig = {
+    'with replication': {
+        class: 'SimpleStrategy',
+        replication_factor: 1
+    },
+    durable_writes: true
+};
+const config = {
+    contactPoints: ['127.0.0.1:9042'], 
+    protocolOptions: {port: 9042},
+    keyspaces: {}
+};
+
+config.keyspaces[keyspaceName] = keyspaceConfig;
+var cassandra;
 
 describe('Cassandra', function (done) {
     before((done) => {
-        const cassandra = Cassandra.connect({
-            contactPoints: ['127.0.0.1:9042'], 
-            protocolOptions: {port: 9042},
-            keyspaces: {
-                testkeyspace: {
-                    'with replication': {
-                        class: 'SimpleStrategy',
-                        replication_factor: 1
-                    },
-                    durable_writes: true
-                }
-            }
-        });
+        cassandra = Cassandra.connect(config);
         cassandra.on('error', done);
         cassandra.on('connect', done);
     });
@@ -36,8 +40,11 @@ describe('Cassandra', function (done) {
         assert(UserSchema.model);
     });
 
-    it ('should be able to create keyspaces if they don\'t exist', () => {
-           
+    it ('should be able to create keyspaces if they don\'t exist', (done) => {
+        cassandra.driver.metadata.refreshKeyspace('testkeyspace', (err, result) => {
+            assert.equal(result.name, keyspaceName);
+            done(err);
+        });
     });
 
     it.skip ('should be able to attach static methods', () => {
