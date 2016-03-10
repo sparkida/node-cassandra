@@ -279,7 +279,7 @@ describe('Cassandra', function (done) {
     });
         
     
-    describe.skip('Insert', () => {
+    describe.only('Basic CRUD Ops', () => {
         var testSchema, testModel;
         before(() => {
             testSchema = new Cassandra.Schema({
@@ -301,12 +301,22 @@ describe('Cassandra', function (done) {
             testModel = cassandra.model('testschema', testSchema);
         });
         it ('should be able to perform a basic insert', (done) => {
-            testModel.insert({username: 'foo', age: 30, name: 'bar'}, (err, result) => {
-                console.log(999, err, result);
+            testModel.insert({username: 'foo', age: 30, name: 'bar'}, (err) => {
+                testModel.insert({username: 'baz', age: 32, name: 'bars'}, (err) => {
+                    assert(!err, err);
+                    done();
+                });
+            });
+        });
+
+        it.skip ('should be able to find an item', (done) => {
+            testModel.find({username: 'foo'}, (err, result) => {
+                assert(!err, err);
+                console.log(err, result);
+                done();
             });
         });
     });
-
 
     it.skip ('should be able to attach static methods', () => {
     });
