@@ -269,6 +269,9 @@ describe('Cassandra', function (done) {
                 setTimeout(() => {
                     cassandra.driver.execute('SELECT * FROM system.built_views WHERE keyspace_name = \''
                             + cassandra.keyspace + '\'', (err, row) => {
+                        if (err) {
+                            return done(err);
+                        }
                         assert(!err, err);
                         assert.equal(row.rowLength, 2);
                         done();
@@ -279,7 +282,7 @@ describe('Cassandra', function (done) {
     });
         
     
-    describe('Basic CRUD Ops', () => {
+    describe('CRUD Ops', () => {
         var testSchema, testModel;
         before((done) => {
             testSchema = new Cassandra.Schema({
@@ -287,7 +290,7 @@ describe('Cassandra', function (done) {
                 age: 'int',
                 name: 'text'
             }, {
-                primaryKeys: ['username'],
+                primaryKeys: ['username', 'age'],
                 views: {
                     byName: {
                         //select: ['name', 'username'] is implied
@@ -300,20 +303,33 @@ describe('Cassandra', function (done) {
             });
             testModel = cassandra.model('testcrud', testSchema, done);
         });
-        it ('should be able to perform a basic insert', (done) => {
-            testModel.insert({username: 'foo', age: 30, name: 'bar'}, (err) => {
-                testModel.insert({username: 'baz', age: 32, name: 'bars'}, (err) => {
-                    assert(!err, err);
-                    done();
+
+        describe('Insert', () => {
+            it ('should be able to perform a basic insert', (done) => {
+                testModel.insert({username: 'foo', age: 30, name: 'bar'}, (err) => {
+                    testModel.insert({username: 'baz', age: 32, name: 'bars'}, (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        done();
+                    });
                 });
             });
         });
 
-        it.skip ('should be able to find an item', (done) => {
-            testModel.find({username: 'foo'}, (err, result) => {
-                assert(!err, err);
-                console.log(err, result);
-                done();
+        describe('Find', () => {
+            it.skip ('should be able to return results based off a projection object', (done) => {
+            });
+            it ('should be able to find an item', (done) => {
+                testModel.find({username: 'foo', age: 30}, (err, result) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    assert.equal(result.rowLength, 1);
+                    assert.equal(result.rows[0].username, 'foo');
+                    assert.equal(result.rows[0].age, 30);
+                    done();
+                });
             });
         });
     });
