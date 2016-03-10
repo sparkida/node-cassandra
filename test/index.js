@@ -304,24 +304,96 @@ describe('Cassandra', function (done) {
             testModel = cassandra.model('testcrud', testSchema, done);
         });
 
+        after((done) => {
+            async.series([
+                (next) => cassandra.driver.execute(format(
+                        'DROP MATERIALIZED VIEW %s.%s', 
+                        cassandra.keyspace, 
+                        testModel.name + '__byname'), next),
+                (next) => cassandra.driver.execute(format(
+                        'DROP TABLE %s.%s', 
+                        cassandra.keyspace, 
+                        testModel.name), next)
+            ], done);
+        });
+
         describe('Insert', () => {
             it ('should be able to perform a basic insert', (done) => {
-                testModel.insert({username: 'foo', age: 30, name: 'bar'}, (err) => {
-                    testModel.insert({username: 'baz', age: 32, name: 'bars'}, (err) => {
-                        if (err) {
-                            return done(err);
-                        }
-                        done();
-                    });
-                });
+                async.parallel([
+                    (next) => testModel.insert({username: 'foo', age: 30, name: 'bar'}, next),
+                    (next) => testModel.insert({username: 'foo', age: 31, name: 'bazz'}, next),
+                    (next) => testModel.insert({username: 'baz', age: 32, name: 'bars'}, next)
+                ], done);
             });
         });
 
         describe('Find', () => {
-            it.skip ('should be able to return results based off a projection object', (done) => {
-            });
-            it ('should be able to find an item', (done) => {
+            it ('should be able perform a basic find with queryObject', (done) => {
                 testModel.find({username: 'foo', age: 30}, (err, result) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    assert.equal(result.rowLength, 1);
+                    assert.equal(result.rows[0].username, 'foo');
+                    assert.equal(result.rows[0].age, 30);
+                    done();
+                });
+            });
+            it ('should be able perform a complex find with queryObject and operators', (done) => {
+                testModel.find({
+                    username: 'foo',
+                    age: {
+                        $gt: 30, 
+                        $lt: 50
+                    }
+                }, (err, result) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    assert.equal(result.rowLength, 2);
+                    assert.equal(result.rows[0].username, 'foo');
+                    assert.equal(result.rows[1].username, 'foo');
+                    assert.equal(result.rows[0].age, 30);
+                    assert.equal(result.rows[1].age, 31);
+                    done();
+                });
+            });
+            it ('should be able perform a complex find with queryObject and filters', (done) => {
+                testModel.find({
+                    username: 'foo',
+                    age: {
+                        $in: [29, 30, 31]
+                    }
+                }, (err, result) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    assert.equal(result.rowLength, 2);
+                    assert.equal(result.rows[0].username, 'foo');
+                    assert.equal(result.rows[1].username, 'foo');
+                    assert.equal(result.rows[0].age, 30);
+                    assert.equal(result.rows[1].age, 31);
+                    done();
+                });
+            });
+            it ('should be able to return results based off a projection object', (done) => {
+                testModel.find({username: 'foo', age: 30}, ['name'], (err, result) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    assert.equal(result.rowLength, 1);
+                    assert(!result.rows[0].username);
+                    assert(!result.rows[0].age);
+                    assert.equal(result.rows[0].name, 'bar');
+                    done();
+                });
+            });
+            it ('should be able perform a complex find and filter limit', (done) => {
+                testModel.find({
+                    username: 'foo'
+                }, {
+                    limit: 1
+                }, (err, result) => {
                     if (err) {
                         return done(err);
                     }
