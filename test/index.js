@@ -279,9 +279,9 @@ describe('Cassandra', function (done) {
     });
         
     
-    describe.only('Basic CRUD Ops', () => {
+    describe('Basic CRUD Ops', () => {
         var testSchema, testModel;
-        before(() => {
+        before((done) => {
             testSchema = new Cassandra.Schema({
                 username: 'text',
                 age: 'int',
@@ -298,7 +298,7 @@ describe('Cassandra', function (done) {
                     }
                 }
             });
-            testModel = cassandra.model('testschema', testSchema);
+            testModel = cassandra.model('testcrud', testSchema, done);
         });
         it ('should be able to perform a basic insert', (done) => {
             testModel.insert({username: 'foo', age: 30, name: 'bar'}, (err) => {
