@@ -19,14 +19,21 @@ const config = {
 config.keyspace[keyspaceName] = keyspaceConfig;
 var cassandra;
 
-describe('Cassandra', function (done) {
+describe('Cassandra >', function (done) {
+
     before((done) => {
         cassandra = Cassandra.connect(config);
         cassandra.on('error', done);
         cassandra.on('connect', done);
     });
 
-    describe('Keyspace', () => {
+    /*
+    after((done) => {
+        cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, done);
+    });
+    */
+
+    describe('Keyspace >', () => {
         it ('should be able to create keyspaces if they don\'t exist', (done) => {
             cassandra.driver.metadata.refreshKeyspace('testkeyspace', (err, result) => {
                 if (err) {
@@ -41,7 +48,7 @@ describe('Cassandra', function (done) {
         });
     });
 
-    describe('Schema', () => {
+    describe('Schema >', () => {
         it ('should create a Schema object with single partition key', () => {
             assert.doesNotThrow(() => {
                 new Cassandra.Schema({
@@ -136,7 +143,7 @@ describe('Cassandra', function (done) {
         });
     });
 
-    describe('Model', () => {
+    describe('Model >', () => {
         var testPartition,
             testPartitionModel, 
             testCompound,
@@ -220,7 +227,7 @@ describe('Cassandra', function (done) {
         });
     });
 
-    describe('Views', () => {
+    describe('Materialized Views >', () => {//{{{
         var testSchema, testModel;
         before(() => {
             testSchema = new Cassandra.Schema({
@@ -264,25 +271,66 @@ describe('Cassandra', function (done) {
             ], done);
         });
         it ('should be able to create views and attach them to the model', (done) => {
-            testModel = cassandra.model('testschema', testSchema, (err, result) => {
+            testModel = cassandra.model('testschema', testSchema, (err, rows) => {
                 assert(!err, err);
                 setTimeout(() => {
-                    cassandra.driver.execute('SELECT * FROM system.built_views WHERE keyspace_name = \''
-                            + cassandra.keyspace + '\'', (err, row) => {
+                    cassandra.driver.execute('SELECT view_name FROM system_schema.views WHERE keyspace_name = \''
+                            + cassandra.keyspace + "'", (err, result) => {
                         if (err) {
                             return done(err);
                         }
+                        var rows = result.rows;
                         assert(!err, err);
-                        assert.equal(row.rowLength, 2);
+                        assert.equal(rows.length, 2);
+                        assert.equal(rows[0].view_name, testModel.views.byAge.qualifiedName);
+                        assert.equal(rows[1].view_name, testModel.views.byName.qualifiedName);
                         done();
                     });
                 }, 200);
             });
         });
-    });
+        
+        describe('Find >', () => {
+            before((done) => {
+                testModel.insert({username: 'foo', age: 30, name: 'bar'}, done);
+            });
+
+            it ('should be able to find rows specific to the materialized view and return an array', (done) => {
+                testModel.views.byName.find({name: 'bar'}, (err, row) => {
+                    if (err) {
+                        done(err);
+                    } else {
+                        assert.equal(row.length, 1, 'row result is not an array');
+                        assert.equal(row[0].name, 'bar', 'did not find the right row');
+                        assert.equal(Object.keys(row[0])[0], 'name', 'did not use the right order/likely wrong column family used');
+                        done();
+                    }
+                });
+            });
+        });
+
+        describe('FindOne >', () => {
+            before((done) => {
+                testModel.insert({username: 'foo', age: 30, name: 'bar'}, done);
+            });
+
+            it ('should be able to find a single row and return an object', (done) => {
+                testModel.views.byName.findOne({name: 'bar'}, (err, row) => {
+                    if (err) {
+                        done(err);
+                    } else {
+                        assert.equal( ! Array.isArray(row), 1, 'row result should not be an array');
+                        assert.equal(row.name, 'bar', 'did not find the right row');
+                        assert.equal(Object.keys(row)[0], 'name', 'did not use the right order/likely wrong column family used');
+                        done();
+                    }
+                });
+            });
+        });
+    });//}}}
         
     
-    describe('CRUD Ops', () => {
+    describe('CRUD Ops >', () => {
         var testSchema, testModel;
         before((done) => {
             testSchema = new Cassandra.Schema({
@@ -303,7 +351,7 @@ describe('Cassandra', function (done) {
             });
             testModel = cassandra.model('testcrud', testSchema, done);
         });
-
+        /*
         after((done) => {
             async.series([
                 (next) => cassandra.driver.execute(format(
@@ -316,8 +364,8 @@ describe('Cassandra', function (done) {
                         testModel.name), next)
             ], done);
         });
-
-        describe('Insert', () => {
+*/
+        describe('Insert >', () => {
             it ('should be able to perform a basic insert', (done) => {
                 async.parallel([
                     (next) => testModel.insert({username: 'foo', age: 30, name: 'bar'}, next),
@@ -326,16 +374,39 @@ describe('Cassandra', function (done) {
                 ], done);
             });
         });
+        
+        describe('FindOne >', () => {
+            it ('should be able to find a single row and return an object', (done) => {
+                testModel.findOne({username: 'foo'}, (err, row) => {
+                    if (err) {
+                        done(err);
+                    } else {
+                        assert.equal(row.username, 'foo');
+                        done();
+                    }
+                });
+            }); 
+            it ('should return null result when trying to find a single a single non-existent row', (done) => {
+                testModel.findOne({username: 'fsoo'}, (err, row) => {
+                    if (err) {
+                        done(err);
+                    } else {
+                        assert.equal(row, null);
+                        done();
+                    }
+                });
+            }); 
+        });
 
-        describe('Find', () => {
+        describe('Find >', () => {//{{{
             it ('should be able perform a basic find with queryObject', (done) => {
-                testModel.find({username: 'foo', age: 30}, (err, result) => {
+                testModel.find({username: 'foo', age: 30}, (err, rows) => {
                     if (err) {
                         return done(err);
                     }
-                    assert.equal(result.rowLength, 1);
-                    assert.equal(result.rows[0].username, 'foo');
-                    assert.equal(result.rows[0].age, 30);
+                    assert.equal(rows.length, 1);
+                    assert.equal(rows[0].username, 'foo');
+                    assert.equal(rows[0].age, 30);
                     done();
                 });
             });
@@ -346,15 +417,15 @@ describe('Cassandra', function (done) {
                         $gt: 30, 
                         $lt: 50
                     }
-                }, (err, result) => {
+                }, (err, rows) => {
                     if (err) {
                         return done(err);
                     }
-                    assert.equal(result.rowLength, 2);
-                    assert.equal(result.rows[0].username, 'foo');
-                    assert.equal(result.rows[1].username, 'foo');
-                    assert.equal(result.rows[0].age, 30);
-                    assert.equal(result.rows[1].age, 31);
+                    assert.equal(rows.length, 2);
+                    assert.equal(rows[0].username, 'foo');
+                    assert.equal(rows[1].username, 'foo');
+                    assert.equal(rows[0].age, 30);
+                    assert.equal(rows[1].age, 31);
                     done();
                 });
             });
@@ -364,27 +435,27 @@ describe('Cassandra', function (done) {
                     age: {
                         $in: [29, 30, 31]
                     }
-                }, (err, result) => {
+                }, (err, rows) => {
                     if (err) {
                         return done(err);
                     }
-                    assert.equal(result.rowLength, 2);
-                    assert.equal(result.rows[0].username, 'foo');
-                    assert.equal(result.rows[1].username, 'foo');
-                    assert.equal(result.rows[0].age, 30);
-                    assert.equal(result.rows[1].age, 31);
+                    assert.equal(rows.length, 2);
+                    assert.equal(rows[0].username, 'foo');
+                    assert.equal(rows[1].username, 'foo');
+                    assert.equal(rows[0].age, 30);
+                    assert.equal(rows[1].age, 31);
                     done();
                 });
             });
             it ('should be able to return results based off a projection object', (done) => {
-                testModel.find({username: 'foo', age: 30}, ['name'], (err, result) => {
+                testModel.find({username: 'foo', age: 30}, ['name'], (err, rows) => {
                     if (err) {
                         return done(err);
                     }
-                    assert.equal(result.rowLength, 1);
-                    assert(!result.rows[0].username);
-                    assert(!result.rows[0].age);
-                    assert.equal(result.rows[0].name, 'bar');
+                    assert.equal(rows.length, 1);
+                    assert(!rows[0].username);
+                    assert(!rows[0].age);
+                    assert.equal(rows[0].name, 'bar');
                     done();
                 });
             });
@@ -393,17 +464,57 @@ describe('Cassandra', function (done) {
                     username: 'foo'
                 }, {
                     limit: 1
-                }, (err, result) => {
+                }, (err, rows) => {
                     if (err) {
                         return done(err);
                     }
-                    assert.equal(result.rowLength, 1);
-                    assert.equal(result.rows[0].username, 'foo');
-                    assert.equal(result.rows[0].age, 30);
+                    assert.equal(rows.length, 1);
+                    assert.equal(rows[0].username, 'foo');
+                    assert.equal(rows[0].age, 30);
                     done();
                 });
             });
+        });//}}}
+
+        describe('Update >', () => {
+            it ('should return an error attempting to update a primary key', (done) => {
+                testModel.update({username: 'foo', age: 30}, {age: 33}, (err, rows) => {
+                    assert(err, 'Error not found, should have returned an error');
+                    if (err) {
+                        done();
+                    }
+                });
+            });
+            it ('should be able to perform a basic update on a single value', (done) => {
+                testModel.update({username: 'foo', age: 30}, {name: 'test'}, (err, rows) => {
+                    done(err);
+                });
+            });
         });
+
+        describe('Delete >', () => {//{{{
+            it ('should be able to delete row(s) by query', (done) => {
+                var query = {
+                        username: 'foo', 
+                        age: 30
+                    };
+                testModel.delete(query, (err, result) => {
+                    if (err) {
+                        done(err);
+                    } else {
+                        testModel.find(query, (err, result) => {
+                            if (err) {
+                                done(err);
+                            } else {
+                                assert.equal(result, null);
+                                done();
+                            }
+                        });
+                    }
+                });
+            });
+        });//}}}
+
     });
 
     it.skip ('should be able to attach static methods', () => {
