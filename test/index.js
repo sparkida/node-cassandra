@@ -21,6 +21,8 @@ var cassandra;
 
 describe('Cassandra >', function (done) {
 
+    this.timeout(5000);
+
     before((done) => {
         cassandra = Cassandra.connect(config);
         cassandra.on('error', done);
