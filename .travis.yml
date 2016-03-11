@@ -1,0 +1,24 @@
+sudo: required
+dist: trusty
+language: node_js
+before_install:
+  - cp .env.sample .env
+  - sed -i 's/local/testing/g' .env
+  - sudo rm -rf /var/lib/cassandra/*
+  - wget http://www.us.apache.org/dist/cassandra/3.3/apache-cassandra-3.3-bin.tar.gz && tar -xzf apache-cassandra-3.3-bin.tar.gz && sudo sh apache-cassandra-3.3/bin/cassandra -R
+script:
+  - ./node_modules/.bin/grunt test
+after_success:
+  - npm run report
+node_js:
+  - '5.8.0'
+  - '5.7.0'
+  - '5.5.0'
+  - '5.3.0'
+  - '5.1.0'
+  - '4.3.2'
+  - '4.2.6'
+  - '0.12.0'
+  - '0.10.0'
+git:
+  depth: 3
