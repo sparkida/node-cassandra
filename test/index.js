@@ -26,13 +26,9 @@ describe('Cassandra >', function (done) {
         cassandra.on('error', done);
         cassandra.on('connect', done);
     });
-
-    /*
     after((done) => {
         cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, done);
     });
-    */
-
     describe('Keyspace >', () => {
         it ('should be able to create keyspaces if they don\'t exist', (done) => {
             cassandra.driver.metadata.refreshKeyspace('testkeyspace', (err, result) => {
@@ -141,6 +137,7 @@ describe('Cassandra >', function (done) {
                 });
             });
         });
+        
     });
 
     describe('Model >', () => {
@@ -174,9 +171,9 @@ describe('Cassandra >', function (done) {
         });
         after(() => {
             async.parallel([
-                (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, testPartitionModel.name), next),
-                (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, testCompositeModel.name), next),
-                (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, testCompoundModel.name), next)
+                (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, testPartitionModel.qualifiedName), next),
+                (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, testCompositeModel.qualifiedName), next),
+                (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, testCompoundModel.qualifiedName), next)
             ], done);
         });
         it ('should be able to attach a model to the db instance', (done) => {
@@ -224,6 +221,39 @@ describe('Cassandra >', function (done) {
                 done();
             });
 
+        });
+
+        describe('Static Methods >', () => {
+            var schema;
+            before(() => {
+                schema = new Cassandra.Schema({
+                    name: 'text',
+                    age: 'int',
+                    username: 'text'
+                },{
+                    primaryKeys: ['name']
+                });
+            });
+            it ('should be able to attach static methods to a schema that persist onto the model', (done) => {
+                schema.statics.findFoo = function (callback) {
+                    return this.findOne({name: 'foo'}, callback);
+                };
+                var model = cassandra.model('teststatic', schema, () => {
+                    model.insert({name: 'foo', age: 20, username: 'bar'}, (err, result) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        model.findFoo((err, result) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert(!result.length, 'row result should not be an array');
+                            assert.equal(result.name, 'foo');
+                            done();
+                        });
+                    });
+                });
+            });
         });
     });
 
@@ -351,7 +381,6 @@ describe('Cassandra >', function (done) {
             });
             testModel = cassandra.model('testcrud', testSchema, done);
         });
-        /*
         after((done) => {
             async.series([
                 (next) => cassandra.driver.execute(format(
@@ -364,7 +393,6 @@ describe('Cassandra >', function (done) {
                         testModel.name), next)
             ], done);
         });
-*/
         describe('Insert >', () => {
             it ('should be able to perform a basic insert', (done) => {
                 async.parallel([
