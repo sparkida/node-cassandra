@@ -9,9 +9,21 @@
 [coveralls-badge]: https://coveralls.io/repos/github/vertebrae-org/node-cassandra/badge.svg?branch=master
 [coveralls-link]: https://coveralls.io/github/vertebrae-org/node-cassandra?branch=master
 
-An ORM for NodeJS, based on the ***cassandra-driver*** module.
+Cassandra ORM for NodeJS, based on the ***cassandra-driver*** module.
 
 Read the [full API Documentation](http://vertebrae-org.github.io/node-cassandra).
+
+NodeJS Versions Supported:
+  - 5.8.0
+  - 5.7.1
+  - 5.6.0
+  - 5.5.0
+  - 5.4.1
+  - 5.3.0
+  - 5.2.0
+  - 5.1.1
+  - 5.0.0
+
 
 Examples
 --------
