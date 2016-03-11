@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: Cassandra</title>
+    <title>JSDoc: Class: ColumnFamily</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: Cassandra</h1>
+    <h1 class="page-title">Class: ColumnFamily</h1>
 
     
 
@@ -28,9 +28,10 @@
 
 <header>
     
-        <h2>Cassandra</h2>
+        <h2>
+            <span class="ancestors"><a href="Cassandra.html">Cassandra</a><a href="Cassandra.Model.html">.Model</a>.</span>ColumnFamily</h2>
         
-            <div class="class-description">Create a new Cassandra DB connection</div>
+            <div class="class-description">Create a new Cassandra ColumnFamily attached to a <a href="Cassandra.Schema.html">Cassandra.Schema</a> on the named table and creating the table if it doesn't exist. In general, you should use the instanced method <a href="Cassandra.html#model">Cassandra#model</a> to attach models</div>
         
     
 </header>
@@ -44,7 +45,7 @@
     <h2>Constructor</h2>
     
 
-    <h4 class="name" id="Cassandra"><span class="type-signature"></span>new Cassandra<span class="signature">(options)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="ColumnFamily"><span class="type-signature"></span>new ColumnFamily<span class="signature">(model, name)</span><span class="type-signature"></span></h4>
 
     
 
@@ -83,7 +84,7 @@
 
         <tr>
             
-                <td class="name"><code>options</code></td>
+                <td class="name"><code>model</code></td>
             
 
             <td class="type">
@@ -99,369 +100,9 @@
 
             
 
-            <td class="description last">an object defining how the connection will be made</td>
+            <td class="description last">the parent model the view will be based off of</td>
         </tr>
 
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="cassandra.js.html">cassandra.js</a>, <a href="cassandra.js.html#line40">line 40</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <h5>Example</h5>
-    
-        <p class="code-caption">Connect to keyspace "testKeyspace" with options</p>
-    
-    <pre class="prettyprint"><code>var options = {
-  contactPoints: ['127.0.0.1'],
-  protocolOptions: {port: 9042},
-  keyspace: {
-    testkeyspace: {
-      durableWrites: true,
-      withReplication: {
-        class: 'SimpleStrategy',
-        replication_factor: 1
-      }
-    }
-  }
-};</code></pre>
-
-
-
-    
-    </div>
-
-    
-
-    
-
-    
-        <h3 class="subsection-title">Classes</h3>
-
-        <dl>
-            <dt><a href="Cassandra.Model.html">Model</a></dt>
-            <dd></dd>
-        
-            <dt><a href="Cassandra.Schema.html">Schema</a></dt>
-            <dd></dd>
-        </dl>
-    
-
-     
-
-    
-
-    
-        <h3 class="subsection-title">Members</h3>
-
-        
-            
-<h4 class="name" id=".types"><span class="type-signature">(static) </span>types<span class="type-signature"></span></h4>
-
-
-
-
-<div class="description">
-    List of supported field types
-</div>
-
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="cassandra.js.html">cassandra.js</a>, <a href="cassandra.js.html#line126">line 126</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-    <dt class="tag-see">See:</dt>
-    <dd class="tag-see">
-        <ul>
-            <li><a href="https://github.com/datastax/nodejs-driver/blob/master/lib/types/index.js">CassandraDriver.types</a></li>
-        </ul>
-    </dd>
-    
-
-    
-</dl>
-
-
-
-
-
-
-        
-    
-
-    
-        <h3 class="subsection-title">Methods</h3>
-
-        
-            
-
-    
-
-    <h4 class="name" id=".connect"><span class="type-signature">(static) </span>connect<span class="signature">(options)</span><span class="type-signature"></span></h4>
-
-    
-
-
-
-<div class="description">
-    Shortcut constructor for Cassandra
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>options</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">an object defining how the connection will be made</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="cassandra.js.html">cassandra.js</a>, <a href="cassandra.js.html#line60">line 60</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-            
-
-    
-
-    <h4 class="name" id="model"><span class="type-signature"></span>model<span class="signature">(name, schema, callback)</span><span class="type-signature"></span></h4>
-
-    
-
-
-
-<div class="description">
-    Create a new <a href="Cassandra.Model.html">Cassandra.Model</a> attached to a <a href="Cassandra.Schema.html">Cassandra.Schema</a>
-object on the named table, creating the table if it doesn't exist.
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
     
 
         <tr>
@@ -482,53 +123,7 @@ object on the named table, creating the table if it doesn't exist.
 
             
 
-            <td class="description last">the name of the table to attach the schema to</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>schema</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">the schema object</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>callback</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">a callback to be called once the table has been created</td>
+            <td class="description last">the materialized view's name, will become the name of the column family</td>
         </tr>
 
     
@@ -569,7 +164,7 @@ object on the named table, creating the table if it doesn't exist.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="cassandra.js.html">cassandra.js</a>, <a href="cassandra.js.html#line107">line 107</a>
+        <a href="column-family.js.html">column-family.js</a>, <a href="column-family.js.html#line20">line 20</a>
     </li></ul></dd>
     
 
@@ -594,15 +189,487 @@ object on the named table, creating the table if it doesn't exist.
 
 
 
-    <h5>Example</h5>
+
     
-        <p class="code-caption">Attach a schema to a model for querying</p>
+    </div>
+
     
-    <pre class="prettyprint"><code>var cassandra = Cassandra.connect(...);
-//create the ORM's schema
-var testSchema = new Cassandra.Schema(...);
-//attach the schema to the current cassandra instance
-var testModel = cassandra.model('test', testSchema);</code></pre>
+
+    
+
+    
+
+     
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    <h4 class="name" id="_createTable"><span class="type-signature"></span>_createTable<span class="signature">(callback)</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+<div class="description">
+    Creates the table specified by the <a href="Cassandra.Model.html">Cassandra.Model</a> constructor
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>callback</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">receives err, result</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="column-family.js.html">column-family.js</a>, <a href="column-family.js.html#line47">line 47</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="_createViews"><span class="type-signature"></span>_createViews<span class="signature">(callback)</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+<div class="description">
+    Creates the materialized views specified by the <a href="Cassandra.Schema.html">Cassandra.Schema</a> options
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>callback</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">receives err, result</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="column-family.js.html">column-family.js</a>, <a href="column-family.js.html#line69">line 69</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="createView"><span class="type-signature"></span>createView<span class="signature">(viewName, config, callback|querystring, noQualify)</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+<div class="description">
+    Creates a new materialized view and attachs it to the model Cassandra.Model#views
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>viewName</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">the name of the current view</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>config</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">the views configuration object</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>callback|querystring</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+|
+
+<span class="param-type">boolean</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">if callback, receieves err, result. Else if "false" will return querystring</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>noQualify</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">boolean</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">do not attempt to qualify the configuration</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="column-family.js.html">column-family.js</a>, <a href="column-family.js.html#line91">line 91</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

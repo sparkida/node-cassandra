@@ -45,7 +45,7 @@
     <h2>Constructor</h2>
     
 
-    <h4 class="name" id="Schema"><span class="type-signature"></span>new Schema<span class="signature">(fields, options)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="Schema"><span class="type-signature"></span>new Schema<span class="signature">(columns, options)</span><span class="type-signature"></span></h4>
 
     
 
@@ -84,7 +84,7 @@
 
         <tr>
             
-                <td class="name"><code>fields</code></td>
+                <td class="name"><code>columns</code></td>
             
 
             <td class="type">
@@ -164,7 +164,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="schema.js.html">schema.js</a>, <a href="schema.js.html#line25">line 25</a>
+        <a href="schema.js.html">schema.js</a>, <a href="schema.js.html#line36">line 36</a>
     </li></ul></dd>
     
 
@@ -195,9 +195,19 @@
     
     <pre class="prettyprint"><code>var testSchema = new Cassandra.Schema({
   name: 'text',
-  age: 'int'
+  age: 'int',
+  username: 'text'
 }, {
-  primaryKeys: ['name']
+  primaryKeys: ['username'],
+  views: {
+    byName: {
+      primaryKeys: ['name'],//, 'username'], is implied
+      orderBy: {
+        name: 'desc',
+        username: 'asc'
+      }
+    }
+  }
 });</code></pre>
 
 
@@ -225,14 +235,14 @@
 
     
 
-    <h4 class="name" id="prepareFields"><span class="type-signature"></span>prepareFields<span class="signature">()</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="_prepareColumns"><span class="type-signature"></span>_prepareColumns<span class="signature">()</span><span class="type-signature"></span></h4>
 
     
 
 
 
 <div class="description">
-    Prepare Schema fields and validate their types
+    Prepare Schema columns and validate their types
 This will check the list of types against the <a href="Cassandra.html#.types">Cassandra.types</a>
 </div>
 
@@ -277,7 +287,7 @@ This will check the list of types against the <a href="Cassandra.html#.types">Ca
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="schema.js.html">schema.js</a>, <a href="schema.js.html#line39">line 39</a>
+        <a href="schema.js.html">schema.js</a>, <a href="schema.js.html#line59">line 59</a>
     </li></ul></dd>
     
 
@@ -311,6 +321,486 @@ This will check the list of types against the <a href="Cassandra.html#.types">Ca
 
 
         
+            
+
+    
+
+    <h4 class="name" id="_qualifyPrimaryKeys"><span class="type-signature"></span>_qualifyPrimaryKeys<span class="signature">(primaryKeys)</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+<div class="description">
+    Validates keys against the prepared model
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>primaryKeys</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">array</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">an array of primary keys</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="schema.js.html">schema.js</a>, <a href="schema.js.html#line146">line 146</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="_qualifyViews"><span class="type-signature"></span>_qualifyViews<span class="signature">(views)</span><span class="type-signature"> &rarr; {undefined}</span></h4>
+
+    
+
+
+
+<div class="description">
+    Validates each view defined by the schema's options
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>views</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">an object of defined views</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="schema.js.html">schema.js</a>, <a href="schema.js.html#line80">line 80</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+<h5>Throws:</h5>
+
+        
+
+    <div class="param-desc">
+    
+        Error - invalid view settings
+    
+    </div>
+
+
+    
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">undefined</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="qualifyView"><span class="type-signature"></span>qualifyView<span class="signature">(viewName, viewConfig)</span><span class="type-signature"> &rarr; {boolean}</span></h4>
+
+    
+
+
+
+<div class="description">
+    Qualify a single view by name
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>viewName</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">the name of the materialized view, this will be convert to <columnFamilyName>___<viewName></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>viewConfig</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">a valid view configuration</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="schema.js.html">schema.js</a>, <a href="schema.js.html#line95">line 95</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+<h5>Throws:</h5>
+
+        
+
+    <div class="param-desc">
+    
+        Error - invalid view settings
+    
+    </div>
+
+
+    
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    true - if successful
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">boolean</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
     
 
     
@@ -326,13 +816,13 @@ This will check the list of types against the <a href="Cassandra.html#.types">Ca
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Cassandra.html">Cassandra</a></li><li><a href="Cassandra.Model.html">Model</a></li><li><a href="Cassandra.Schema.html">Schema</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConnectionOptions">ConnectionOptions</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Cassandra.html">Cassandra</a></li><li><a href="Cassandra.Model.html">Model</a></li><li><a href="Cassandra.Model.ColumnFamily.html">ColumnFamily</a></li><li><a href="Cassandra.Model.MaterializedView.html">MaterializedView</a></li><li><a href="Cassandra.Schema.html">Schema</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConnectionOptions">ConnectionOptions</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Wed Mar 09 2016 20:58:45 GMT+0000 (UTC)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Fri Mar 11 2016 13:42:33 GMT-0800 (PST)
 </footer>
 
 <script> prettyPrint(); </script>

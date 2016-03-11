@@ -36,45 +36,154 @@
 
 const types = require('./cassandra').types;
 const dataTypes = types.dataTypes;
+const format = require('util').format;
 
 /**
  * Create a new Cassandra Schema to be attached to the models
  * @memberof Cassandra
- * @param {object} fields - A list of key:values representative of field:type
+ * @param {object} columns - A list of key:values representative of field:type
  * @param {object} options - A list of schema specific options, primary/composite keys
  * @example &lt;caption>Create a new Schema Object&lt;/caption>
  * var testSchema = new Cassandra.Schema({
  *   name: 'text',
- *   age: 'int'
+ *   age: 'int',
+ *   username: 'text'
  * }, {
- *   primaryKeys: ['name']
+ *   primaryKeys: ['username'],
+ *   views: {
+ *     byName: {
+ *       primaryKeys: ['name'],//, 'username'], is implied
+ *       orderBy: {
+ *         name: 'desc',
+ *         username: 'asc'
+ *       }
+ *     }
+ *   }
  * });
  */
 class Schema {
-    constructor(fields, options) {
+
+    constructor(columns, options) {
         var schema = this;
         schema.model = {};
+        schema.statics = {};
         schema.options = options || {};
-        schema.fields = fields;
-        schema.prepareFields();
+        schema.columns = columns;
+        if (!Array.isArray(options.primaryKeys) || options.primaryKeys.length === 0) {
+            throw new Error('Schema expects have option "primaryKeys" of type array');
+        }
+        schema._prepareColumns();
+        schema._qualifyPrimaryKeys();
+        if (options.views) {
+            schema._qualifyViews();
+        }
     }
     
     /**
-     * Prepare Schema fields and validate their types
+     * Prepare Schema columns and validate their types
      * This will check the list of types against the {@link Cassandra.types}
      * @see {@link https://github.com/datastax/nodejs-driver/blob/master/lib/types/index.js|CassandraDriver.types}
      */
-    prepareFields(fields) {
+    _prepareColumns() {
         var schema = this;
-        var field;
-        fields = fields || schema.fields;
-        for (field in fields) {
+        var columns = schema.columns;
+        schema.columns = [];
+        for (let field in columns) {
             //TODO check if object with options
-            let type = fields[field].toLowerCase();
+            let type = columns[field].toLowerCase();
             if (!dataTypes[type]) {
                 throw new TypeError('Cassandra data type not supported: "' + type + '"');
             }
             schema.model[field] = type;
+            schema.columns.push(field);
+        }
+    }
+
+    /**
+     * Validates each view defined by the schema's options
+     * @param {object} views - an object of defined views
+     * @throws Error - invalid view settings
+     * @returns {undefined}
+     */
+    _qualifyViews(views) {
+        var schema = this;
+        views = views || schema.options.views;
+        for (let viewName in views) {
+            schema.qualifyView(viewName, views[viewName]);
+        }
+    }
+
+    /**
+     * Qualify a single view by name
+     * @param {string} viewName - the name of the materialized view, this will be convert to &lt;columnFamilyName>___&lt;viewName>
+     * @param {object} viewConfig - a valid view configuration
+     * @returns {boolean} true - if successful
+     * @throws Error - invalid view settings
+     */
+    qualifyView(viewName, viewConfig) {
+        var schema = this;
+        var model = schema.model;
+        var view = viewConfig;
+        if (!view.select &amp;&amp; !view.primaryKeys) {
+            throw new Error(format('Views must specify at least a "primaryKeys" '
+                + 'property to create from table; view: %s', viewName));
+        }
+        if (view.select) {
+            for (let column of view.select) {
+                if (!model[column]) {
+                    throw new Error(format(
+                        'Could not add materialized view, undefined '
+                        + 'column in select array; view: %s, column: %s', 
+                        viewName,
+                        column
+                    ));
+                }
+            }
+        }
+        if (view.primaryKeys) {
+            for (let column of view.primaryKeys) {
+                if (!model[column]) {
+                    throw new Error(format(
+                        'Could not add materialized view, undefined '
+                        + 'column in primaryKeys array; view: %s, column: %s', 
+                        viewName,
+                        column
+                    ));
+                }
+            }
+        }
+        if (view.orderBy) {
+            for (let column in view.orderBy) {
+                if (!model[column]) {
+                    throw new Error(format(
+                        'Could not add materialized view, undefined '
+                        + 'column in primaryKeys array; view: %s, column: %s', 
+                        viewName,
+                        column
+                    ));
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Validates keys against the prepared model
+     * @param {array} primaryKeys - an array of primary keys
+     */
+    _qualifyPrimaryKeys(primaryKeys) {
+        var schema = this;
+        var model = schema.model;
+        primaryKeys = primaryKeys || schema.options.primaryKeys;
+        //composite
+        if (Array.isArray(primaryKeys[0])) {
+            primaryKeys = primaryKeys[0].concat(primaryKeys.slice(1));
+        }
+        for (let key of primaryKeys) {
+            if (!model[key]) {
+                throw new Error('Invalid Primary Key, column not '
+                    + 'found in schema model; @key: ' + key);
+            }
         }
     }
 }
@@ -90,13 +199,13 @@ module.exports = Schema;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Cassandra.html">Cassandra</a></li><li><a href="Cassandra.Model.html">Model</a></li><li><a href="Cassandra.Schema.html">Schema</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConnectionOptions">ConnectionOptions</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Cassandra.html">Cassandra</a></li><li><a href="Cassandra.Model.html">Model</a></li><li><a href="Cassandra.Model.ColumnFamily.html">ColumnFamily</a></li><li><a href="Cassandra.Model.MaterializedView.html">MaterializedView</a></li><li><a href="Cassandra.Schema.html">Schema</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConnectionOptions">ConnectionOptions</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Wed Mar 09 2016 20:58:45 GMT+0000 (UTC)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Fri Mar 11 2016 13:42:33 GMT-0800 (PST)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: Model</title>
+    <title>JSDoc: Class: MaterializedView</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: Model</h1>
+    <h1 class="page-title">Class: MaterializedView</h1>
 
     
 
@@ -29,9 +29,9 @@
 <header>
     
         <h2>
-            <span class="ancestors"><a href="Cassandra.html">Cassandra</a>.</span>Model</h2>
+            <span class="ancestors"><a href="Cassandra.html">Cassandra</a><a href="Cassandra.Model.html">.Model</a>.</span>MaterializedView</h2>
         
-            <div class="class-description">Create a new Cassandra Model attached to a <a href="Cassandra.Schema.html">Cassandra.Schema</a> on the named table and creating the table if it doesn't exist. In general, you should use the instanced method <a href="Cassandra.html#model">Cassandra#model</a> to attach models</div>
+            <div class="class-description">Create a new Cassandra MaterializedView attached to a <a href="Cassandra.Schema.html">Cassandra.Schema</a> on the named table and creating the table if it doesn't exist. In general, you should use the instanced method Cassandra#createView to attach models</div>
         
     
 </header>
@@ -45,7 +45,7 @@
     <h2>Constructor</h2>
     
 
-    <h4 class="name" id="Model"><span class="type-signature"></span>new Model<span class="signature">(db, name, schema, callback)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="MaterializedView"><span class="type-signature"></span>new MaterializedView<span class="signature">(model, name)</span><span class="type-signature"></span></h4>
 
     
 
@@ -84,7 +84,7 @@
 
         <tr>
             
-                <td class="name"><code>db</code></td>
+                <td class="name"><code>model</code></td>
             
 
             <td class="type">
@@ -100,7 +100,7 @@
 
             
 
-            <td class="description last">the database connection instance</td>
+            <td class="description last">the parent model the view will be based off of</td>
         </tr>
 
     
@@ -123,53 +123,7 @@
 
             
 
-            <td class="description last">the model name, will become the name of the column family</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>schema</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">the <a href="Cassandra.Schema.html">Cassandra.Schema</a> to be attached</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>callback</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">a callback to be called once the table has been created</td>
+            <td class="description last">the materialized view's name, will become the name of the column family</td>
         </tr>
 
     
@@ -210,7 +164,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="model.js.html">model.js</a>, <a href="model.js.html#line38">line 38</a>
+        <a href="materialized-view.js.html">materialized-view.js</a>, <a href="materialized-view.js.html#line19">line 19</a>
     </li></ul></dd>
     
 
@@ -218,13 +172,6 @@
 
     
 
-    
-    <dt class="tag-todo">To Do:</dt>
-    <dd class="tag-todo">
-        <ul>
-            <li>Model.toObject()</li>
-        </ul>
-    </dd>
     
 </dl>
 
@@ -242,33 +189,25 @@
 
 
 
-    <h5>Example</h5>
-    
-        <p class="code-caption">Attach a schema to a model for querying</p>
-    
-    <pre class="prettyprint"><code>var cassandra = Cassandra.connect(...);
-var testSchema = new Cassandra.Schema(...);
-var testModel = new Cassandra.Model(cassandra, 'test', testSchema);</code></pre>
-
-
 
     
     </div>
 
     
+        <h3 class="subsection-title">Extends</h3>
 
-    
-
-    
-        <h3 class="subsection-title">Classes</h3>
-
-        <dl>
-            <dt><a href="Cassandra.Model.ColumnFamily.html">ColumnFamily</a></dt>
-            <dd></dd>
         
-            <dt><a href="Cassandra.Model.MaterializedView.html">MaterializedView</a></dt>
-            <dd></dd>
-        </dl>
+
+
+    <ul>
+        <li><a href="Cassandra.Model.html">Cassandra.Model</a></li>
+    </ul>
+
+
+    
+
+    
+
     
 
      
@@ -363,6 +302,11 @@ PRIMARY KEY (...) string value to use in table creation
 
     
 
+    
+    <dt class="inherited-from">Inherited From:</dt>
+    <dd class="inherited-from"><ul class="dummy"><li>
+        <a href="Cassandra.Model.html#_createPartitionKeyQuery">Cassandra.Model#_createPartitionKeyQuery</a>
+    </li></ul></dd>
     
 
     
@@ -495,6 +439,11 @@ PRIMARY KEY (...) string value to use in table creation
     
 
     
+    <dt class="inherited-from">Inherited From:</dt>
+    <dd class="inherited-from"><ul class="dummy"><li>
+        <a href="Cassandra.Model.html#_qualifyQueryColumns">Cassandra.Model#_qualifyQueryColumns</a>
+    </li></ul></dd>
+    
 
     
 
@@ -574,6 +523,201 @@ PRIMARY KEY (...) string value to use in table creation
 </dl>
 
     
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="find"><span class="type-signature"></span>find<span class="signature">(queryObject, projection, callback)</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+<div class="description">
+    Find items in the model's materialized view
+Similar to <a href="Cassandra.Model.html">Cassandra.Model</a>
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>queryObject</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">an object representing column:value</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>projection</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">array</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">projection for selecting a subset of columns in select statements</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>callback</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">receives err, result</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="materialized-view.js.html">materialized-view.js</a>, <a href="materialized-view.js.html#line50">line 50</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5>Example</h5>
+    
+    <pre class="prettyprint"><code>var projection = ['name']; //default "*"
+var options = {
+  allowFiltering: true,
+  limit: 1
+};
+var query = {
+  name: 'foo',
+  age: {
+    $gt: 30
+  }
+};
+cassandra.find(query, projection, options, (err, result) => console.log(err, result));
+// SELECT name FROM &lt;table> WHERE name = 'foo' AND age > 30 LIMIT 1 ALLOW FILTERING</code></pre>
 
 
 
