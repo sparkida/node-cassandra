@@ -2,8 +2,6 @@ sudo: required
 dist: trusty
 language: node_js
 before_install:
-  - cp .env.sample .env
-  - sed -i 's/local/testing/g' .env
   - sudo rm -rf /var/lib/cassandra/*
   - wget http://www.us.apache.org/dist/cassandra/3.3/apache-cassandra-3.3-bin.tar.gz && tar -xzf apache-cassandra-3.3-bin.tar.gz && sudo sh apache-cassandra-3.3/bin/cassandra -R
 script:
