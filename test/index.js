@@ -12,7 +12,7 @@ const keyspaceConfig = {
     durableWrites: true
 };
 const config = {
-    contactPoints: ['127.0.0.1:9042'], 
+    contactPoints: ['127.0.0.1:9042'],
     protocolOptions: {port: 9042},
     keyspace: {}
 };
@@ -95,7 +95,7 @@ describe('Cassandra >', function (done) {
             it ('should fail at qualifying a schema if a view specifies an undeclared column in the "primaryKeys" array', () => {
                 assert.throws(() => {
                     new Cassandra.Schema({
-                        username: 'text', 
+                        username: 'text',
                         age: 'int'
                     },{
                         primaryKeys: ['age'],
@@ -111,7 +111,7 @@ describe('Cassandra >', function (done) {
                 assert.throws(() => {
                     new Cassandra.Schema({
                         name: 'text',
-                        username: 'text', 
+                        username: 'text',
                         age: 'int'
                     },{
                         primaryKeys: ['age'],
@@ -128,7 +128,7 @@ describe('Cassandra >', function (done) {
                 assert.throws(() => {
                     new Cassandra.Schema({
                         name: 'text',
-                        username: 'text', 
+                        username: 'text',
                         age: 'int'
                     },{
                         primaryKeys: ['age'],
@@ -148,7 +148,7 @@ describe('Cassandra >', function (done) {
 
     describe('Model >', () => {
         var testPartition,
-            testPartitionModel, 
+            testPartitionModel,
             testCompound,
             testCompoundModel,
             testComposite,
@@ -261,16 +261,16 @@ describe('Cassandra >', function (done) {
             after((done) => {
                 async.series([
                     (next) => cassandra.driver.execute(format(
-                            'DROP TABLE %s.%s', 
-                            cassandra.keyspace, 
+                            'DROP TABLE %s.%s',
+                            cassandra.keyspace,
                             'teststatic2'), next),
                     (next) => cassandra.driver.execute(format(
-                            'DROP MATERIALIZED VIEW %s.%s', 
-                            cassandra.keyspace, 
+                            'DROP MATERIALIZED VIEW %s.%s',
+                            cassandra.keyspace,
                             TestModel.name + '__byname'), next),
                     (next) => cassandra.driver.execute(format(
-                            'DROP TABLE %s.%s', 
-                            cassandra.keyspace, 
+                            'DROP TABLE %s.%s',
+                            cassandra.keyspace,
                             TestModel.name), next)
                 ], done);
             });
@@ -310,7 +310,7 @@ describe('Cassandra >', function (done) {
                 it.skip ('should be able to insert set types', () => {
                 });
             });
-            
+
             describe('FindOne >', () => {
                 it ('should be able to find a single row and return an object', (done) => {
                     TestModel.findOne({username: 'foo'}, (err, row) => {
@@ -321,7 +321,7 @@ describe('Cassandra >', function (done) {
                             done();
                         }
                     });
-                }); 
+                });
                 it ('should return null result when trying to find a single a single non-existent row', (done) => {
                     TestModel.findOne({username: 'fsoo'}, (err, row) => {
                         if (err) {
@@ -331,7 +331,7 @@ describe('Cassandra >', function (done) {
                             done();
                         }
                     });
-                }); 
+                });
             });
 
             describe('Find >', () => {//{{{
@@ -350,7 +350,7 @@ describe('Cassandra >', function (done) {
                     TestModel.find({
                         username: 'foo',
                         age: {
-                            $gt: 30, 
+                            $gt: 30,
                             $lt: 50
                         }
                     }, (err, rows) => {
@@ -443,7 +443,7 @@ describe('Cassandra >', function (done) {
             describe('Delete >', () => {//{{{
                 it ('should be able to delete row(s) by query', (done) => {
                     var query = {
-                            username: 'foo', 
+                            username: 'foo',
                             age: 30
                         };
                     TestModel.delete(query, (err, result) => {
@@ -496,8 +496,8 @@ describe('Cassandra >', function (done) {
         });
         after((done) => {
             cassandra.driver.execute(format(
-                'DROP TABLE %s.%s', 
-                cassandra.keyspace, 
+                'DROP TABLE %s.%s',
+                cassandra.keyspace,
                 UserModel.name
             ), done);
         });
@@ -513,7 +513,7 @@ describe('Cassandra >', function (done) {
             it ('should fail at creating a new ModelInstance without a required field ', () => {
                 assert.throws(() => {
                     new UserModel({
-                        age: 24, 
+                        age: 24,
                         username: 'fii'
                     });
                 });
@@ -521,7 +521,7 @@ describe('Cassandra >', function (done) {
             it ('should automatically set default values of type "function" by calling the function', () => {
                 var user = new UserModel({
                         names: 'baz',
-                        age: 24, 
+                        age: 24,
                         username: 'fii'
                     });
                 assert(user.hex instanceof Cassandra.types.Uuid, 'not a valid guid');
@@ -529,7 +529,7 @@ describe('Cassandra >', function (done) {
             it ('should automatically set default values of type "function" by calling the function', () => {
                 var user = new UserModel({
                         names: 'baz',
-                        age: 24, 
+                        age: 24,
                         username: 'fii'
                     });
                 assert(user.hex instanceof Cassandra.types.Uuid, 'not a valid guid');
@@ -577,16 +577,16 @@ describe('Cassandra >', function (done) {
         after((done) => {
             async.series([
                 (next) => cassandra.driver.execute(format(
-                        'DROP MATERIALIZED VIEW %s.%s', 
-                        cassandra.keyspace, 
+                        'DROP MATERIALIZED VIEW %s.%s',
+                        cassandra.keyspace,
                         TestModel.name + '__byname'), next),
                 (next) => cassandra.driver.execute(format(
-                        'DROP MATERIALIZED VIEW %s.%s', 
-                        cassandra.keyspace, 
+                        'DROP MATERIALIZED VIEW %s.%s',
+                        cassandra.keyspace,
                         TestModel.name + '__byage'), next),
                 (next) => cassandra.driver.execute(format(
-                        'DROP TABLE %s.%s', 
-                        cassandra.keyspace, 
+                        'DROP TABLE %s.%s',
+                        cassandra.keyspace,
                         TestModel.name), next)
             ], done);
         });
@@ -610,7 +610,7 @@ describe('Cassandra >', function (done) {
                 }, 200);
             });
         });
-        
+
         describe('Find >', () => {
             before((done) => {
                 TestModel.insert({username: 'foo', age: 30, name: 'bar'}, done);
