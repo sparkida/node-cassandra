@@ -785,6 +785,122 @@ describe('Cassandra >', function (done) {
             it.skip ('should be able to set null values', () => {
             });
         });
+
+        describe('Methods >', () => {
+            it ('should save only altered values if their keys exist in schema model', (done) => {
+                var user = new UserModel({
+                        hex: Cassandra.uuid(),
+                        names: 'baz',
+                        username: 'fii'
+                    });
+                user.age = 35;
+                user.badProp = 'should not exist';
+                user.save((err) => {
+                    assert.equal(user.age, 35, 'did not properly set default age value');
+                    assert.equal(user.age, user.__$$object.age);
+                    done();
+                });
+            });
+            it ('should properly update the data model following a save', (done) => {
+                var user = new UserModel({
+                        hex: Cassandra.uuid(),
+                        names: 'baz3',
+                        username: 'fii3'
+                    });
+                user.sync((err) => {
+                    assert(!err, err);
+                    user.username = 'fii4';
+                    user.save((err) => {
+                        assert.equal(user.username, user.__$$object.username);
+                        done();
+                    });
+                });
+            });
+            it ('should fail at saving a primary key change', (done) => {
+                var user = new UserModel({
+                        hex: Cassandra.uuid(),
+                        names: 'primTest',
+                        username: 'primTestUserName'
+                    });
+                user.save((err) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    user.names = 'faa';
+                    user.save((err) => {
+                        assert(err instanceof Error);
+                        assert.equal(err.message, 'PRIMARY KEY part names found in SET part');
+                        done();
+                    });
+                });
+            });
+            it ('should be able to restore data model from failed attempts', (done) => {
+                var user = new UserModel({
+                        hex: Cassandra.uuid(),
+                        names: 'primTest2',
+                        username: 'primTestUserName2'
+                    });
+                user.save((err) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    user.names = 'faa';
+                    user.save((err) => {
+                        assert(err instanceof Error);
+                        assert.equal(err.message, 'PRIMARY KEY part names found in SET part');
+                        assert.equal(user.names, 'faa');
+                        user.restore();
+                        assert.equal(user.names, 'primTest2');
+                        done();
+                    });
+                });
+            });
+            it('should be able to delete a column from the instance\'s column family using projections', (done) => {
+                var user = new UserModel({
+                        hex: Cassandra.uuid(),
+                        names: 'primTest2',
+                        username: 'primTestUserName2'
+                    });
+                user.save((err) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    user.delete(['username'], (err) => {
+                        assert(!err, err);
+                        UserModel.findOne({names: 'primTest2'}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.equal(row.names, 'primTest2');
+                            assert.equal(row.username, null);
+                            done();
+                        });
+                    });
+                });
+            });
+            it('should be able to delete an entire row from a table', (done) => {
+                var user = new UserModel({
+                        hex: Cassandra.uuid(),
+                        names: 'primTest2',
+                        username: 'primTestUserName2'
+                    });
+                user.save((err) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    user.delete((err) => {
+                        assert(!err, err);
+                        UserModel.findOne({names: 'primTest2'}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.equal(row, null);
+                            done();
+                        });
+                    });
+                });
+            });
+        });
     });
 
     describe('Materialized Views >', () => {//{{{
