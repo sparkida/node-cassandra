@@ -12,7 +12,7 @@ const keyspaceConfig = {
     durableWrites: true
 };
 const config = {
-    contactPoints: ['127.0.0.1:9042'],
+    contactPoints: ['127.0.0.1'],
     protocolOptions: {port: 9042},
     keyspace: {}
 };
@@ -27,10 +27,44 @@ describe('Cassandra >', function (done) {
     before((done) => {
         cassandra = Cassandra.connect(config);
         cassandra.on('error', done);
-        cassandra.on('connect', done);
+        cassandra.once('connect', () => {
+            cassandra.removeListener('error', done);
+            done();
+        });
     });
     after((done) => {
         cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, done);
+    });
+    it ('should fail at connecting without a keyspace', () => {
+        assert.throws(() => {
+            Cassandra.connect();
+        });
+    });
+    it ('should be able to connect with only a keyspace', (done) => {
+        var cassandra2 = Cassandra.connect({keyspace: {testfail: keyspaceConfig}});
+        cassandra2.once('connect', () => {
+            cassandra2.driver.shutdown();
+            done();
+        });
+        cassandra2.once('error', done);
+    });
+    it ('should properly error on failed connection attempts', (done) => {
+        var cassandra2 = Cassandra.connect({
+            contactPoints: ['127.0.4444.4444'],
+            keyspace: {testfail: keyspaceConfig}
+        });
+        cassandra2.once('connect', () => {
+            done(new Error('Cassandra should not have connected'));
+        });
+        cassandra2.once('error', () => {
+            done();
+        });
+    });
+    it ('should have type maps for Uuid', () => {
+        assert(Cassandra.uuid() instanceof Cassandra.types.Uuid, 'Uuid is not mapped properly');
+    });
+    it ('should have type maps for TimeUuid', () => {
+        assert(Cassandra.timeuuid() instanceof Cassandra.types.TimeUuid, 'TimeUuid is not mapped properly');
     });
     describe('Keyspace >', () => {
         it ('should be able to create keyspaces if they don\'t exist', (done) => {
@@ -48,6 +82,59 @@ describe('Cassandra >', function (done) {
     });
 
     describe('Schema >', () => {
+        it ('should throw an error creating a schema without primaryKeys', () => {
+            assert.throws(() => {
+                new Cassandra.Schema({
+                    foo: 'text'
+                });
+            }, (err) => {
+                return err instanceof Error
+                    && err.message === 'Schema expects have option "primaryKeys" of type array';
+            });
+        });
+        it ('should throw an error preparing columns if no value if passed', () => {
+            assert.throws(() => {
+                Cassandra.Schema.prototype._prepareColumns();
+            }, (err) => {
+                return err instanceof Error
+                    && err.message === 'Must provide an object structure of your schema';
+            });
+        });
+        it ('should throw an error preparing columns with an invalid data type', () => {
+            assert.throws(() => {
+                new Cassandra.Schema({
+                    badType: 'badType'
+                }, {
+                    primaryKeys: ['badType']
+                });
+            }, (err) => {
+                return err instanceof TypeError
+                    && err.message === 'Cassandra data type not supported: "badType"';
+            });
+        });
+        it ('should properly set required fields', () => {
+            var schema = new Cassandra.Schema({
+                fooBar: {
+                    type: 'text',
+                    required: true
+                }
+            }, {
+                primaryKeys: ['fooBar']
+            });
+            assert(!!schema.required.fooBar);
+        });
+        it ('should properly set default fields', () => {
+            var schema = new Cassandra.Schema({
+                fooBar: {
+                    type: 'text',
+                    default: () => 'fooname'
+                }
+            }, {
+                primaryKeys: ['fooBar']
+            });
+            assert(!!schema.defaults.fooBar);
+            assert.equal(schema.defaults.fooBar(), 'fooname');
+        });
         describe('Keys >', () => {
             it ('should create a Schema object with single partition key', () => {
                 assert.doesNotThrow(() => {
@@ -182,12 +269,70 @@ describe('Cassandra >', function (done) {
                 (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, testCompoundModel.qualifiedName), next)
             ], done);
         });
+        it.skip ('should be able to create a table with table options object', () => {
+        });
+        it ('should fail at creating a Model without a Cassandra instance(db)', () => {
+            assert.throws(() => {
+                new Cassandra.Model();
+            }, (err) => {
+                return err instanceof TypeError
+                    && err.message === 'Model expects parameter 1 to be an instanceof Cassandra';
+            });
+        });
+        it ('should fail at creating a Model without a name', () => {
+            assert.throws(() => {
+                new Cassandra.Model(cassandra);
+            }, (err) => {
+                return err instanceof TypeError
+                    && err.message === 'Model expects parameter 2 to be of type "string": @"undefined"';
+            });
+        });
+        it ('should fail at creating a Model without a valid schema', () => {
+            assert.throws(() => {
+                new Cassandra.Model(cassandra, 'fail', {});
+            }, (err) => {
+                return err instanceof TypeError
+                    && err.message === 'Model expects parameter 3 to be an instance of Cassandra.Schema: "undefined"';
+            });
+        });
         it ('should be able to attach a model to the db instance', (done) => {
             async.parallel([
                 (next) => testPartitionModel = cassandra.model('testpartition', testPartition, next),
                 (next) => testCompoundModel = cassandra.model('testcompound', testCompound, next),
                 (next) => testCompositeModel = cassandra.model('testcomposite', testComposite, next)
             ], done);
+        });
+        it ('should fail at buiding the schema after instantiation', () => {
+            assert.throws(() => testPartitionModel.model._buildSchema());
+        });
+        it ('should not qualify a query object if it has foreign properties', () => {
+            assert.throws(() => {
+                testPartitionModel.model._qualifyQueryColumns({foo: 'bar'});
+            }, (err) => {
+                return err instanceof Error
+                    && err.message === 'Not a valid queryObject, could not find column: foo, model: testpartition';
+            });
+        });
+        it ('should not qualify a query object if it has foreign properties', () => {
+            assert.throws(() => {
+                testPartitionModel.model._buildQueryComponents({
+                    username: {
+                        $badOperator: 'bar'
+                    }
+                });
+            }, (err) => {
+                return err instanceof Error
+                    && err.message === 'Invalid Operator type, not supported: $badOperator';
+            });
+        });
+        it ('should properly build queries with contains/contains key', () => {
+            assert.doesNotThrow(() => {
+                testPartitionModel.model._buildQueryComponents({
+                    username: {
+                        $contains: 'bar'
+                    }
+                });
+            });
         });
         it ('should create a table "testpartition" with a single partition key', (done) => {
             cassandra.driver.metadata.getTable(cassandra.keyspace, testPartitionModel.name, (err, table) => {
@@ -332,11 +477,45 @@ describe('Cassandra >', function (done) {
                         }
                     });
                 });
+                it ('should pass null to callback if nothing found', (done) => {
+                    TestModel.findOne({username: 'no one'}, (err, row) => {
+                        if (err) {
+                            done(err);
+                        } else {
+                            assert.equal(row, null);
+                            done();
+                        }
+                    });
+                });
+                it ('should be able to pass options to find', (done) => {
+                    TestModel.findOne({username: 'foo'}, {allowFiltering: true}, (err, row) => {
+                        if (err) {
+                            done(err);
+                        } else {
+                            assert.equal(row.username, 'foo');
+                            done();
+                        }
+                    });
+                });
             });
 
             describe('Find >', () => {//{{{
+                it ('should throw an error trying to perform a find without a callback', () => {
+                    assert.throws(() => TestModel.find({username: 'foo', age: 30}));
+                });
                 it ('should be able perform a basic find with queryObject', (done) => {
                     TestModel.find({username: 'foo', age: 30}, (err, rows) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        assert.equal(rows.length, 1);
+                        assert.equal(rows[0].username, 'foo');
+                        assert.equal(rows[0].age, 30);
+                        done();
+                    });
+                });
+                it ('should be able perform a basic find that ALLOWS FILTERING', (done) => {
+                    TestModel.find({username: 'foo', age: 30}, {allowFiltering: true}, (err, rows) => {
                         if (err) {
                             return done(err);
                         }
@@ -441,12 +620,62 @@ describe('Cassandra >', function (done) {
             });
 
             describe('Delete >', () => {//{{{
+                it ('should throw an error trying to perform a delete without a callback', () => {
+                    assert.throws(() => TestModel.delete({username: 'foo', age: 30}));
+                });
+
                 it ('should be able to delete row(s) by query', (done) => {
                     var query = {
                             username: 'foo',
                             age: 30
                         };
                     TestModel.delete(query, (err, result) => {
+                        if (err) {
+                            done(err);
+                        } else {
+                            TestModel.find(query, (err, result) => {
+                                if (err) {
+                                    done(err);
+                                } else {
+                                    assert.equal(result, null);
+                                    done();
+                                }
+                            });
+                        }
+                    });
+                });
+                it ('should not find any rows to delete USING TIMESTAMP older than now', (done) => {
+                    var query = {
+                            username: 'foo',
+                            age: 31
+                        },
+                        options = {
+                            usingTimestamp: (Date.now() - 10000) * 1000
+                        };
+                    TestModel.delete(query, options, (err, result) => {
+                        if (err) {
+                            done(err);
+                        } else {
+                            TestModel.find(query, (err, result) => {
+                                if (err) {
+                                    done(err);
+                                } else {
+                                    assert.equal(result.length, 1);
+                                    done();
+                                }
+                            });
+                        }
+                    });
+                });
+                it ('should be able to delete row(s) by USING TIMESTAMP', (done) => {
+                    var query = {
+                            username: 'foo',
+                            age: 31
+                        },
+                        options = {
+                            usingTimestamp: (Date.now() + 10000) * 1000
+                        };
+                    TestModel.delete(query, options, (err, result) => {
                         if (err) {
                             done(err);
                         } else {
@@ -500,6 +729,17 @@ describe('Cassandra >', function (done) {
                 cassandra.keyspace,
                 UserModel.name
             ), done);
+        });
+        it ('should expose model, views, and a name property', () => {
+            var User = new UserModel({
+                    hex: Cassandra.uuid(),
+                    names: 'baz',
+                    username: 'fii'
+                });
+            assert(User.model instanceof Cassandra.Model, 'Model is not bound properly');
+            assert(User.model.Factory.model instanceof Cassandra.Model, 'Model should be a circular reference');
+            assert(!!User.views, 'Model.views is not bound properly');
+            assert(User.model.name, 'Model.name is not bound properly');
         });
         it ('should only enumerate properties set by the validated object during instantiation', () => {
             var user = new UserModel({
@@ -574,16 +814,19 @@ describe('Cassandra >', function (done) {
                 }
             });
         });
+        //delete views and drop column family
         after((done) => {
             async.series([
-                (next) => cassandra.driver.execute(format(
-                        'DROP MATERIALIZED VIEW %s.%s',
-                        cassandra.keyspace,
-                        TestModel.name + '__byname'), next),
-                (next) => cassandra.driver.execute(format(
-                        'DROP MATERIALIZED VIEW %s.%s',
-                        cassandra.keyspace,
-                        TestModel.name + '__byage'), next),
+                (next) => async.each([
+                        TestModel.views.byAge.qualifiedName,
+                        TestModel.views.byName.qualifiedName,
+                        TestModel.views.byNameAndAge.qualifiedName
+                    ], (viewName, cb) => {
+                        cassandra.driver.execute(format(
+                            'DROP MATERIALIZED VIEW %s.%s',
+                            cassandra.keyspace,
+                            viewName), cb);
+                    }, next),
                 (next) => cassandra.driver.execute(format(
                         'DROP TABLE %s.%s',
                         cassandra.keyspace,
@@ -595,19 +838,106 @@ describe('Cassandra >', function (done) {
                 if (err) {
                     return done(err);
                 }
-                setTimeout(() => {
-                    cassandra.driver.execute('SELECT view_name FROM system_schema.views WHERE keyspace_name = \''
-                            + cassandra.keyspace + "'", (err, result) => {
+                cassandra.driver.execute('SELECT view_name FROM system_schema.views WHERE keyspace_name = \''
+                        + cassandra.keyspace + "'", (err, result) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    var rows = result.rows;
+                    assert.equal(rows.length, 2);
+                    assert.equal(rows[0].view_name, TestModel.views.byAge.qualifiedName);
+                    assert.equal(rows[1].view_name, TestModel.views.byName.qualifiedName);
+                    done();
+                });
+            });
+        });
+        it ('should throw an error trying to attach the same view twice', () => {
+            assert.throws(() => TestModel.model.createView('byName', {}, null, null));
+        });
+        it ('should throw an error if there is not at least a primaryKey property', () => {
+            assert.throws(() => {
+                TestModel.model.createView('noPrimary', {});
+            }, (err) => {
+                return err instanceof Error
+                    && err.message === 'Views must specify at least a "primaryKeys" '
+                        +'property to create from table; view: noPrimary';
+            });
+        });
+        it ('should throw an error if the primary keys do not qualify', () => {
+            assert.throws(() => {
+                new Cassandra.Schema({
+                    name: 'text'
+                }, {
+                    primaryKeys: ['badKey']
+                });
+            }, (err) => {
+                return err instanceof Error
+                    && err.message === 'Invalid Primary Key, column not found in schema model; @key: badKey';
+            });
+        });
+        it ('should throw an error if the view does not qualify', () => {
+            assert.throws(() => TestModel.model.createView('byNames', {primaryKeys:['foo']}, null, null));
+        });
+        it ('should return error if failing to build view', (done) => {
+            TestModel.model.createView('failTest', {
+                select: ['name', 'age', 'username'],
+                primaryKeys: ['name', 'age']
+            }, (err) => {
+                if (err) {
+                    return done();
+                }
+                done(new Error('Should have thrown an error'));
+            });
+        });
+        it ('should return error if trying to build an existing view with a callback', (done) => {
+            TestModel.model.createView('byName', {
+                primaryKeys: ['name']
+            }, (err) => {
+                if (err) {
+                    return done();
+                }
+                done(new Error('Should have thrown an error'));
+            });
+        });
+        it ('should return query string to build view without callback', () => {
+            var query = TestModel.model.createView('stringTest', {
+                    select: ['name', 'age', 'username'],
+                    primaryKeys: ['name','username','age']
+                });
+            var match = 'CREATE MATERIALIZED VIEW IF NOT EXISTS '
+                + 'testkeyspace.testschema__stringtest AS SELECT '
+                + 'name, age, username FROM testschema WHERE name '
+                + 'IS NOT NULL AND username IS NOT NULL AND age IS '
+                + 'NOT NULL PRIMARY KEY (name, username, age)';
+            assert.equal(query, match, 'Queries do not match');
+        });
+        it ('should throw an error if failing to build view without callback', () => {
+            assert.throws(() => {
+                TestModel.model.createView('byName', {
+                    select: ['name', 'age', 'username'],
+                    primaryKeys: ['name']
+                });
+            });
+        });
+        it ('should be able to create a view after instantiation', (done) => {
+            TestModel.model.createView('byNameAndAge', {
+                select: ['name'],
+                primaryKeys: ['name']
+            }, () => {
+                cassandra.driver.execute(
+                    'SELECT view_name FROM system_schema.views WHERE '
+                    + 'keyspace_name=? AND view_name=?',
+                    [cassandra.keyspace, TestModel.views.byNameAndAge.qualifiedName],
+                    {prepare: true},
+                    (err, result) => {
                         if (err) {
                             return done(err);
                         }
                         var rows = result.rows;
-                        assert.equal(rows.length, 2);
-                        assert.equal(rows[0].view_name, TestModel.views.byAge.qualifiedName);
-                        assert.equal(rows[1].view_name, TestModel.views.byName.qualifiedName);
+                        assert.equal(rows.length, 1);
                         done();
-                    });
-                }, 200);
+                    }
+                );
             });
         });
 
@@ -618,6 +948,18 @@ describe('Cassandra >', function (done) {
 
             it ('should be able to find rows specific to the materialized view and return an array', (done) => {
                 TestModel.views.byName.find({name: 'bar'}, (err, row) => {
+                    if (err) {
+                        done(err);
+                    } else {
+                        assert.equal(row.length, 1, 'row result is not an array');
+                        assert.equal(row[0].name, 'bar', 'did not find the right row');
+                        assert.equal(Object.keys(row[0])[0], 'name', 'did not use the right order/likely wrong column family used');
+                        done();
+                    }
+                });
+            });
+            it ('should be able to find rows specific to a projection and return an array', (done) => {
+                TestModel.views.byName.find({name: 'bar'}, ['name'], (err, row) => {
                     if (err) {
                         done(err);
                     } else {
@@ -647,11 +989,19 @@ describe('Cassandra >', function (done) {
                     }
                 });
             });
+            it ('should be able to find a single row specific to a projection and return an array', (done) => {
+                TestModel.views.byName.findOne({name: 'bar'}, ['name'], (err, row) => {
+                    if (err) {
+                        done(err);
+                    } else {
+                        assert.equal( ! Array.isArray(row), 1, 'row result should not be an array');
+                        assert.equal(row.name, 'bar', 'did not find the right row');
+                        assert.equal(Object.keys(row)[0], 'name', 'did not use the right order/likely wrong column family used');
+                        done();
+                    }
+                });
+            });
         });
     });//}}}
 
-    it.skip ('should convert uuid types from strings to objects or fail', () => {
-    });
-    it.skip ('should be able to create a table with table options object', () => {
-    });
 });
