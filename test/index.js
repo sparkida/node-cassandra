@@ -1268,6 +1268,18 @@ describe('Cassandra >', function (done) {
                 TestModel.insert({username: 'foo', age: 30, name: 'bar'}, done);
             });
 
+            it ('should properly handle arguments even when undefined is passed', (done) => {
+                TestModel.findOne.apply(TestModel, [{username: 'foo'}, (err, row) => {
+                    if (err) {
+                        done(err);
+                    } else {
+                        assert.equal( ! Array.isArray(row), 1, 'row result should not be an array');
+                        assert.equal(row.username, 'foo', 'did not find the right row');
+                        assert.equal(Object.keys(row)[0], 'age', 'did not use the right order/likely wrong column family used');
+                        done();
+                    }
+                }, undefined]);
+            });
             it ('should be able to find a single row and return an object', (done) => {
                 TestModel.views.byName.findOne({name: 'bar'}, (err, row) => {
                     if (err) {
