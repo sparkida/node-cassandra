@@ -35,12 +35,27 @@ describe('Cassandra >', function (done) {
     after((done) => {
         cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, done);
     });
+    it ('should fail at connecting without a keyspace', () => {
+        assert.throws(() => {
+            Cassandra.connect();
+        });
+    });
+    it ('should fail at connecting without a keyspace', () => {
+        assert.throws(() => {
+            Cassandra.connect({keyspace:{foo:{}}});
+        }, (err) => {
+            return err instanceof Error
+                && err.message === 'Cassandra connect expects "keyspace" options to provide a withReplication property';
+        });
+    });
     it ('should throw an error trying to clone a bad options object', () => {
         assert.throws(() => {
             var circular = {
                 foo: function () {}, 
                 keyspace: {
-                    foo: {}
+                    foo: {
+                        withReplication: {}
+                    }
                 }
             };
             circular.circular = circular;
@@ -52,11 +67,6 @@ describe('Cassandra >', function (done) {
     });
     it ('should be able to open up mutliple connections', (done) => {
         cassandra.connect(done);
-    });
-    it ('should fail at connecting without a keyspace', () => {
-        assert.throws(() => {
-            Cassandra.connect();
-        });
     });
     it ('should be able to connect with only a keyspace', (done) => {
         var cassandra2 = Cassandra.connect({keyspace: {testfail: keyspaceConfig}});
