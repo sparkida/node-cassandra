@@ -28,7 +28,7 @@ NodeJS Versions Supported:
 Examples
 --------
 
-- Getting Connected
+<h4>Getting Connected</h4>
 
 ```javacript
 var Cassandra = require('node-cassandra');
@@ -50,7 +50,7 @@ cassandra.on('connect', (err) => console.log('connected'));
 ```
 
 
-- Creating your first Schema, Model and Materialized View
+<h4>Creating your first Schema, Model and Materialized View</h4>
 
 ```javascript
 //create a new schema
