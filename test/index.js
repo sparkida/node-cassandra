@@ -24,88 +24,133 @@ describe('Cassandra >', function (done) {
 
     this.timeout(5000);
 
-    before((done) => {
-        cassandra = Cassandra.connect(config);
-        cassandra.on('error', done);
-        cassandra.once('connect', () => {
-            cassandra.removeListener('error', done);
-            done();
-        });
+    var origKey;
+    before(() => {
+        cassandra = new Cassandra(config);
     });
     after((done) => {
         cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, done);
     });
-    it ('should fail at connecting without a keyspace', () => {
-        assert.throws(() => {
-            Cassandra.connect();
-        });
-    });
-    it ('should fail at connecting without a keyspace', () => {
-        assert.throws(() => {
-            Cassandra.connect({keyspace:{foo:{}}});
-        }, (err) => {
-            return err instanceof Error
-                && err.message === 'Cassandra connect expects "keyspace" options to provide a withReplication property';
-        });
-    });
-    it ('should throw an error trying to clone a bad options object', () => {
-        assert.throws(() => {
-            var circular = {
-                foo: function () {}, 
-                keyspace: {
-                    foo: {
-                        withReplication: {}
+
+    describe('Headless >', () => {
+        var schema, TestModel;
+        it ('should be able to create schemas without a connection', () => {
+            schema = new Cassandra.Schema({
+                foo: 'text',
+                name: 'text',
+                username: 'text'
+            }, {
+                primaryKeys: ['foo'],
+                views: {
+                    byName: {
+                        primaryKeys: ['name']
                     }
                 }
-            };
-            circular.circular = circular;
-            new Cassandra(circular);
-        }, (err) => {
-            return err instanceof Error
-                && err.message === 'Invalid options object, could not clone';
+            });
+        });
+        it ('should be able to create models without a connection', () => {
+            TestModel = cassandra.model('testmodelfoo', schema);
+        });
+        it ('should be able to create materialized views without a connection', () => {
+            TestModel.model.createView('byUsername', {
+                primaryKeys: ['username']
+            });
+            assert(!!TestModel.views.byUsername);
         });
     });
-    it ('should be able to open up mutliple connections', (done) => {
-        cassandra.connect(done);
-    });
-    it ('should be able to connect with only a keyspace', (done) => {
-        var cassandra2 = Cassandra.connect({keyspace: {testfail: keyspaceConfig}});
-        cassandra2.once('connect', () => {
-            cassandra2.driver.shutdown();
-            done();
-        });
-        cassandra2.once('error', done);
-    });
-    it ('should properly error on failed connection attempts', (done) => {
-        var cassandra2 = Cassandra.connect({
-            contactPoints: ['127.0.4444.4444'],
-            keyspace: {testfail: keyspaceConfig}
-        });
-        cassandra2.once('connect', () => {
-            done(new Error('Cassandra should not have connected'));
-        });
-        cassandra2.once('error', () => {
-            done();
-        });
-    });
-    it ('should have type maps for Uuid', () => {
-        assert(Cassandra.uuid() instanceof Cassandra.types.Uuid, 'Uuid is not mapped properly');
-    });
-    it ('should have type maps for TimeUuid', () => {
-        assert(Cassandra.timeuuid() instanceof Cassandra.types.TimeUuid, 'TimeUuid is not mapped properly');
-    });
-    describe('Keyspace >', () => {
-        it ('should be able to create keyspaces if they don\'t exist', (done) => {
-            cassandra.driver.metadata.refreshKeyspace('testkeyspace', (err, result) => {
-                if (err) {
-                    return done(err);
-                }
-                assert.equal(result.name, keyspaceName);
+
+    describe('Connecting >', () => {
+        it ('should be able to connect and only be connected after setting up queued tasks', (done) => {
+            cassandra.connect();
+            cassandra.on('error', done);
+            cassandra.once('connect', () => {
+                cassandra.removeListener('error', done);
                 done();
             });
         });
+        it ('should properly error on failed connection attempts', (done) => {
+            var cassandra2 = Cassandra.connect({
+                contactPoints: ['127.0.4444.4444'],
+                keyspace: {testfail: keyspaceConfig}
+            });
+            cassandra2.once('connect', () => {
+                done(new Error('Cassandra should not have connected'));
+            });
+            cassandra2.once('error', () => {
+                done();
+            });
+        });
+        it ('should be able to open up mutliple connections', (done) => {
+            cassandra.connect(done);
+        });
+        it ('should have type maps for Uuid', () => {
+            assert(Cassandra.uuid() instanceof Cassandra.types.Uuid, 'Uuid is not mapped properly');
+        });
+        it ('should have type maps for TimeUuid', () => {
+            assert(Cassandra.timeuuid() instanceof Cassandra.types.TimeUuid, 'TimeUuid is not mapped properly');
+        });
+    });
+
+    describe('Keyspace >', () => {
         it ('should set the "keyspace" property on Cassandra', () => {
             assert(cassandra.keyspace, 'testkeyspace');
+        });
+        it ('should fail at connecting without a keyspace', () => {
+            assert.throws(() => {
+                Cassandra.connect();
+            });
+        });
+        it ('should fail at connecting without a keyspace', () => {
+            assert.throws(() => {
+                Cassandra.connect({keyspace:{foo:{}}});
+            }, (err) => {
+                return err instanceof Error
+                    && err.message === 'Cassandra connect expects "keyspace" options to provide a withReplication property';
+            });
+        });
+        it ('should be able to attach a new keyspace to an existing connection', (done) => {
+            origKey = cassandra.options.keyspace;
+            cassandra.options.keyspace = {
+                newTestKeyspace: {
+                    withReplication: {
+                        class: 'SimpleStrategy',
+                        replication_factor: 1
+                    }
+                }
+            };
+            cassandra.setKeyspace((err, res) => {
+                done(err);
+            });
+        });
+        it ('should be able to switch back to an existing keyspace', (done) => {
+            cassandra.options.keyspace = origKey;
+            assert(cassandra.keyspace, 'testkeyspace');
+            cassandra.setKeyspace(done);
+        });
+        it ('should throw an error trying to clone a bad options object', () => {
+            assert.throws(() => {
+                var circular = {
+                    foo: function () {}, 
+                    keyspace: {
+                        foo: {
+                            withReplication: {}
+                        }
+                    }
+                };
+                circular.circular = circular;
+                new Cassandra(circular);
+            }, (err) => {
+                return err instanceof Error
+                    && err.message === 'Invalid options object, could not clone';
+            });
+        });
+        it ('should be able to connect with only a keyspace', (done) => {
+            var cassandra2 = Cassandra.connect({keyspace: {testfail: keyspaceConfig}});
+            cassandra2.once('connect', () => {
+                cassandra2.driver.shutdown();
+                done();
+            });
+            cassandra2.once('error', done);
         });
     });
 
@@ -1076,8 +1121,11 @@ describe('Cassandra >', function (done) {
                 if (err) {
                     return done(err);
                 }
-                cassandra.driver.execute('SELECT view_name FROM system_schema.views WHERE keyspace_name = \''
-                        + cassandra.keyspace + "'", (err, result) => {
+                var query = 'SELECT view_name FROM system_schema.views WHERE keyspace_name = \''
+                        + cassandra.keyspace + "' and view_name in (" 
+                        + Object.keys(TestModel.views).map((key) => "'" + TestModel.views[key].qualifiedName + "'").join(',')
+                        + ')';
+                cassandra.driver.execute(query, (err, result) => {
                     if (err) {
                         return done(err);
                     }
@@ -1141,7 +1189,7 @@ describe('Cassandra >', function (done) {
             var query = TestModel.model.createView('stringTest', {
                     select: ['name', 'age', 'username'],
                     primaryKeys: ['name','username','age']
-                });
+                }, false);
             var match = 'CREATE MATERIALIZED VIEW IF NOT EXISTS '
                 + 'testkeyspace.testschema__stringtest AS SELECT '
                 + 'name, age, username FROM testschema WHERE name '
