@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: MaterializedView</title>
+    <title>JSDoc: Class: BaseModel</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: MaterializedView</h1>
+    <h1 class="page-title">Class: BaseModel</h1>
 
     
 
@@ -28,10 +28,10 @@
 
 <header>
     
-        <h2>
-            <span class="ancestors"><a href="Cassandra.html">Cassandra</a><a href="Cassandra.Model.html">.Model</a>.</span>MaterializedView</h2>
+        <h2>BaseModel</h2>
         
-            <div class="class-description">Create a new Cassandra MaterializedView attached to a <a href="Cassandra.Schema.html">Cassandra.Schema</a> on the named table and creating the table if it doesn't exist. In general, you should use the instanced method <a href="Cassandra.Model.ColumnFamily.html#createView">Model.createView()</a> to attach models</div>
+            <div class="class-description">BaseModel class extends the <a href="Cassandra.Model.html">Model</a> class
+and implements basic CRUD ops from <a href="AbstractModel.html">AbstractModel</a></div>
         
     
 </header>
@@ -45,7 +45,7 @@
     <h2>Constructor</h2>
     
 
-    <h4 class="name" id="MaterializedView"><span class="type-signature"></span>new MaterializedView<span class="signature">(model, name)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="BaseModel"><span class="type-signature"></span>new BaseModel<span class="signature">()</span><span class="type-signature"></span></h4>
 
     
 
@@ -57,78 +57,6 @@
 
 
 
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>model</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">the parent model the view will be based off of</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>name</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">the materialized view's name, will become the name of the column family</td>
-        </tr>
-
-    
-    </tbody>
-</table>
 
 
 
@@ -164,7 +92,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="materialized-view.js.html">materialized-view.js</a>, <a href="materialized-view.js.html#line19">line 19</a>
+        <a href="model.js.html">model.js</a>, <a href="model.js.html#line183">line 183</a>
     </li></ul></dd>
     
 
@@ -523,283 +451,6 @@ PRIMARY KEY (...) string value to use in table creation
 </dl>
 
     
-
-
-
-        
-            
-
-    
-
-    <h4 class="name" id="find"><span class="type-signature"></span>find<span class="signature">(queryObject, projection, callback)</span><span class="type-signature"></span></h4>
-
-    
-
-
-
-<div class="description">
-    Find items in the model's materialized view
-Similar to <a href="Cassandra.Model.html">Cassandra.Model</a>
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>queryObject</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">an object representing column:value</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>projection</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">array</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">projection for selecting a subset of columns in select statements</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>callback</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">receives err, result</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="materialized-view.js.html">materialized-view.js</a>, <a href="materialized-view.js.html#line61">line 61</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <h5>Example</h5>
-    
-    <pre class="prettyprint"><code>var projection = ['name']; //default "*"
-var options = {
-  allowFiltering: true,
-  limit: 1
-};
-var query = {
-  name: 'foo',
-  age: {
-    $gt: 30
-  }
-};
-cassandra.find(query, projection, options, (err, result) => console.log(err, result));
-// SELECT name FROM &lt;table> WHERE name = 'foo' AND age > 30 LIMIT 1 ALLOW FILTERING</code></pre>
-
-
-
-        
-            
-
-    
-
-    <h4 class="name" id="findOne"><span class="type-signature"></span>findOne<span class="signature">()</span><span class="type-signature"></span></h4>
-
-    
-
-
-
-<div class="description">
-    Find a single row in the materialized view
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="materialized-view.js.html">materialized-view.js</a>, <a href="materialized-view.js.html#line77">line 77</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

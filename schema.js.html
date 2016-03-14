@@ -45,6 +45,7 @@ const format = require('util').format;
  * @param {object} options - A list of schema specific options, primary/composite keys
  * @example &lt;caption>Create a new Schema Object&lt;/caption>
  * var testSchema = new Cassandra.Schema({
+ *   id: {default: Cassandra.uuid, required: true},
  *   name: 'text',
  *   age: 'int',
  *   username: 'text'
@@ -64,39 +65,62 @@ const format = require('util').format;
 class Schema {
 
     constructor(columns, options) {
+        options = options || {};
         var schema = this;
         schema.model = {};
         schema.statics = {};
-        schema.options = options || {};
-        schema.columns = columns;
-        if (!Array.isArray(options.primaryKeys) || options.primaryKeys.length === 0) {
+        schema.options = options;
+        schema.required = {}; //list of required columns
+        schema.defaults = {}; //list of
+        schema.columns = []; //list of
+        schema.columnMap = {}; //maps case-sensitive model fields
+        schema.dataMap = {}; //maps case-sensitive model fields
+        if (!options.primaryKeys || !Array.isArray(options.primaryKeys) || options.primaryKeys.length === 0) {
             throw new Error('Schema expects have option "primaryKeys" of type array');
         }
-        schema._prepareColumns();
+        schema._prepareColumns(columns);
         schema._qualifyPrimaryKeys();
         if (options.views) {
             schema._qualifyViews();
         }
     }
-    
+
     /**
-     * Prepare Schema columns and validate their types
-     * This will check the list of types against the {@link Cassandra.types}
+     * Prepare Schema columns and validate their types this will set the schema's
+     * columns array list and set the "default", "required", and "type" settings
+     * for the columns, populating {@link Cassandra.Schema.columns|schema.columns},
+     * {@link Cassandra.Schema.required}, {@link Cassandra.Schema.defaults}.
+     * This will check the list of types against the {@link Cassandra.types.dataTypes}
+     * @param {object} columns - A list of key:values representative of field:type
      * @see {@link https://github.com/datastax/nodejs-driver/blob/master/lib/types/index.js|CassandraDriver.types}
      */
-    _prepareColumns() {
-        var schema = this;
-        var columns = schema.columns;
-        schema.columns = [];
+    _prepareColumns(columns) {
+        if (!columns) {
+            throw new Error('Must provide an object structure of your schema');
+        }
+        var schema = this,
+            column,
+            type;
         for (let field in columns) {
-            //TODO check if object with options
-            let type = columns[field].toLowerCase();
+            column = columns[field];
+            type = column.type || column;
+            //if type is object instead of string, then get the type property
             if (!dataTypes[type]) {
                 throw new TypeError('Cassandra data type not supported: "' + type + '"');
             }
             schema.model[field] = type;
+            if (column.required) {
+                schema.required[field] = 1;
+            }
+            if (column.default) {
+                schema.defaults[field] = column.default;
+            }
+            let mapping = field.toLowerCase();
             schema.columns.push(field);
+            schema.columnMap[field] = mapping;
+            schema.dataMap[mapping] = field;
         }
+        schema.columns = schema.columns.sort();
     }
 
     /**
@@ -133,7 +157,7 @@ class Schema {
                 if (!model[column]) {
                     throw new Error(format(
                         'Could not add materialized view, undefined '
-                        + 'column in select array; view: %s, column: %s', 
+                        + 'column in select array; view: %s, column: %s',
                         viewName,
                         column
                     ));
@@ -145,7 +169,7 @@ class Schema {
                 if (!model[column]) {
                     throw new Error(format(
                         'Could not add materialized view, undefined '
-                        + 'column in primaryKeys array; view: %s, column: %s', 
+                        + 'column in primaryKeys array; view: %s, column: %s',
                         viewName,
                         column
                     ));
@@ -157,7 +181,7 @@ class Schema {
                 if (!model[column]) {
                     throw new Error(format(
                         'Could not add materialized view, undefined '
-                        + 'column in primaryKeys array; view: %s, column: %s', 
+                        + 'column in primaryKeys array; view: %s, column: %s',
                         viewName,
                         column
                     ));
@@ -199,13 +223,13 @@ module.exports = Schema;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Cassandra.html">Cassandra</a></li><li><a href="Cassandra.Model.html">Model</a></li><li><a href="Cassandra.Model.ColumnFamily.html">ColumnFamily</a></li><li><a href="Cassandra.Model.MaterializedView.html">MaterializedView</a></li><li><a href="Cassandra.Schema.html">Schema</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConnectionOptions">ConnectionOptions</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="BaseModel.html">BaseModel</a></li><li><a href="Cassandra.html">Cassandra</a></li><li><a href="Cassandra.Model.html">Model</a></li><li><a href="Cassandra.Model.ColumnFamily.html">ColumnFamily</a></li><li><a href="Cassandra.Model.MaterializedView.html">MaterializedView</a></li><li><a href="Cassandra.Model.ModelInstance.html">ModelInstance</a></li><li><a href="Cassandra.Schema.html">Schema</a></li></ul><h3>Mixins</h3><ul><li><a href="AbstractModel.html">AbstractModel</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConnectionOptions">ConnectionOptions</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Fri Mar 11 2016 13:42:33 GMT-0800 (PST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Mon Mar 14 2016 21:27:21 GMT+0000 (UTC)
 </footer>
 
 <script> prettyPrint(); </script>

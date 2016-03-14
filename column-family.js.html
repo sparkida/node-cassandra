@@ -35,9 +35,15 @@
 
 const Cassandra = require('./cassandra');
 const Model = Cassandra.Model;
-const BaseModel = Model.BaseModel;
 const format = require('util').format;
 const async = require('async');
+const BaseModel = Model.BaseModel;
+const AbstractModel = Model.AbstractModel;
+const AbstractModelPrototype = AbstractModel.prototype;
+const abstractMethods = Object.getOwnPropertyNames(AbstractModelPrototype);
+const arrayUnique = (val, index, self) => {
+    return self.indexOf(val) === index;
+};
 
 /**
  * Create a new Cassandra ColumnFamily attached to a {@link Cassandra.Schema} on the named table and creating the table if it doesn't exist. In general, you should use the instanced method {@link Cassandra#model} to attach models
@@ -47,25 +53,68 @@ const async = require('async');
  */
 class ColumnFamily extends BaseModel {
 
+    constructor(db, name, schema) {
+        super(db, name, schema);
+        var model = this;
+        //instance Factory
+        model.Factory = class extends Model.ModelInstance {
+            constructor(object, bypass) {
+                super(object, model, bypass);
+            }
+            static get name() {
+                return model.name;
+            }
+            static get views() {
+                return model.views;
+            }
+            static get model() {
+                return model;
+            }
+        };
+        //mixin abstract model
+        for (let method of abstractMethods) {
+            if (method === 'constructor') {
+                continue;
+            }
+            //expose ORM specific methods
+            Object.defineProperty(model.Factory, method, {
+                enumerable: true,
+                value: function () {
+                    return AbstractModelPrototype[method].apply(model, arguments);
+                }
+            });
+        }
+        //mixin statics in both instance and class
+        for (let method in schema.statics) {
+            let staticMethod = schema.statics[method];
+            model[method] = staticMethod;
+            model.Factory[method] = function () {
+                staticMethod.apply(model, arguments);
+            };
+        }
+    }
+
     _buildSchema(callback) {
         var model = this;
-        var db = model.db;
+        var cassandra = model.db;
         if (model.__$$built) {
             throw new Error('This should not be overriden!');
         }
         model.__$$built = true;
         model.views = {};
-        async.series([
-            (next) => model._createTable(next),
-            (next) => model._createViews(next)
-        ], (err) => {
-            if (err) {
-                db.emit('error', err);
-            }
-            if (typeof callback === 'function') {
-                callback(err);
-            }
-        });
+        if (cassandra.connected) {
+            async.series([
+                (next) => model._createTable(next),
+                (next) => model._createViews(next)
+            ], (err) => {
+                if (typeof callback === 'function') {
+                    callback(err);
+                }
+            });
+        } else {
+            model._createTable();
+            model._createViews();
+        }
     }
 
     /**
@@ -76,18 +125,22 @@ class ColumnFamily extends BaseModel {
         var model = this;
         var schema = model.schema;
         var cassandra = model.db;
-        var joinFieldTypes = (field) => {
-                return field + ' ' + schema.model[field];
+        var joinColumnTypes = (column) => {
+                return column + ' ' + schema.model[column];
             };
         var query = format(
                 'CREATE TABLE IF NOT EXISTS %s.%s (%s, ',
                 cassandra.keyspace,
                 model.name,
-                Object.keys(schema.model).map(joinFieldTypes).join(', ')
+                schema.columns.map(joinColumnTypes).join(', ')
             );
         query += model._createPartitionKeyQuery(model.primaryKeys);
         query += ')';
-        cassandra.driver.execute(query, done);
+        if (cassandra.connected) {
+            cassandra.driver.execute(query, done);
+        } else {
+            cassandra.queue.push((next) => cassandra.driver.execute(query, next));
+        }
     }
 
     /**
@@ -100,20 +153,29 @@ class ColumnFamily extends BaseModel {
         var views = schema.options.views;
         var cassandra = model.db;
         if (!views) {
-            return done();
+            if (typeof done === 'function') {
+                done();
+            }
+            return;
         }
         var batch = [];
         for (let viewName in views) {
             batch.push(model.createView(viewName, views[viewName], false, true));
         }
-        async.each(batch, (query, next) => cassandra.driver.execute(query, next), done);
+        if (cassandra.connected) {
+            async.each(batch, (query, next) => cassandra.driver.execute(query, next), done);
+        } else {
+            cassandra.queue.push((next) => {
+                async.each(batch, (query, cb) => cassandra.driver.execute(query, cb), next);
+            });
+        }
     }
 
     /**
      * Creates a new materialized view and attachs it to the model {@link Cassandra.Model#views}
      * @param {string} viewName - the name of the current view
      * @param {object} config - the views configuration object
-     * @param {function|boolean} callback|querystring - if callback, receieves err, result. Else if "false" will return querystring
+     * @param {function|boolean} callback|querystring - if callback, receieves err, result. Else if "false" will return querystring, this is strict
      * @param {boolean} noQualify - do not attempt to qualify the configuration
      */
     createView(viewName, config, done, noQualify) {
@@ -121,7 +183,12 @@ class ColumnFamily extends BaseModel {
         var model = this;
         var cassandra = model.db;
         if (model.views[viewName]) {
-            throw new Error('View already exists! ' + model.name + ' - ' + viewName);
+            let error = new Error('View already exists! ' + model.name + ' - ' + viewName);
+            if (typeof done === 'function') {
+                return done(error);
+            } else {
+                throw error;
+            }
         }
         model.views[viewName] = new Model.MaterializedView(model, viewName, config);
         if (!noQualify) {
@@ -140,8 +207,8 @@ class ColumnFamily extends BaseModel {
                 + 'AS SELECT %s FROM %s WHERE %s %s',
                 cassandra.keyspace,
                 model.views[viewName].qualifiedName,
-                view.select 
-                    ? view.select.concat(view.primaryKeys).join(', ')
+                view.select
+                    ? view.select.concat(view.primaryKeys).filter(arrayUnique).join(', ')
                     : view.primaryKeys.join(', '),
                 model.name,
                 where.join(' AND '),
@@ -156,10 +223,12 @@ class ColumnFamily extends BaseModel {
                 })
             );
         }
-        if (!done) {
+        if (false === done) {
             return query;
-        } else {
+        } else if (cassandra.connected) {
             cassandra.driver.execute(query, done);
+        } else {
+            cassandra.queue.push((next) => cassandra.driver.execute(query, next));
         }
     }
 
@@ -176,13 +245,13 @@ module.exports = ColumnFamily;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Cassandra.html">Cassandra</a></li><li><a href="Cassandra.Model.html">Model</a></li><li><a href="Cassandra.Model.ColumnFamily.html">ColumnFamily</a></li><li><a href="Cassandra.Model.MaterializedView.html">MaterializedView</a></li><li><a href="Cassandra.Schema.html">Schema</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConnectionOptions">ConnectionOptions</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="BaseModel.html">BaseModel</a></li><li><a href="Cassandra.html">Cassandra</a></li><li><a href="Cassandra.Model.html">Model</a></li><li><a href="Cassandra.Model.ColumnFamily.html">ColumnFamily</a></li><li><a href="Cassandra.Model.MaterializedView.html">MaterializedView</a></li><li><a href="Cassandra.Model.ModelInstance.html">ModelInstance</a></li><li><a href="Cassandra.Schema.html">Schema</a></li></ul><h3>Mixins</h3><ul><li><a href="AbstractModel.html">AbstractModel</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConnectionOptions">ConnectionOptions</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Fri Mar 11 2016 13:42:33 GMT-0800 (PST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Mon Mar 14 2016 21:27:21 GMT+0000 (UTC)
 </footer>
 
 <script> prettyPrint(); </script>
