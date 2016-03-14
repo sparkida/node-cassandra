@@ -20,18 +20,11 @@ const config = {
 config.keyspace[keyspaceName] = keyspaceConfig;
 var cassandra;
 
-describe('Cassandra >', function (done) {
+describe('Cassandra Headless >', () => {
 
-    this.timeout(5000);
-
-    var origKey;
     before(() => {
         cassandra = new Cassandra(config);
     });
-    after((done) => {
-        cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, done);
-    });
-
     describe('Headless >', () => {
         var schema, TestModel;
         it ('should be able to create schemas without a connection', () => {
@@ -58,16 +51,27 @@ describe('Cassandra >', function (done) {
             assert(!!TestModel.views.byUsername);
         });
     });
+});
+
+describe('Cassandra >', function (done) {
+
+    var origKey;
+
+    this.timeout(5000);
+
+    it('should be able to connect and process a queue', (done) => {
+        cassandra.connect();
+        cassandra.on('error', done);
+        cassandra.once('connect', () => {
+            cassandra.removeListener('error', done);
+            done();
+        });
+    });
+    after((done) => {
+        cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, done);
+    });
 
     describe('Connecting >', () => {
-        it ('should be able to connect and only be connected after setting up queued tasks', (done) => {
-            cassandra.connect();
-            cassandra.on('error', done);
-            cassandra.once('connect', () => {
-                cassandra.removeListener('error', done);
-                done();
-            });
-        });
         it ('should properly error on failed connection attempts', (done) => {
             var cassandra2 = Cassandra.connect({
                 contactPoints: ['127.0.4444.4444'],
@@ -1116,6 +1120,7 @@ describe('Cassandra >', function (done) {
                         TestModel.name), next)
             ], done);
         });
+        
         it ('should be able to create views and attach them to the model', (done) => {
             TestModel = cassandra.model('testschema', testSchema, (err, rows) => {
                 if (err) {
