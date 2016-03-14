@@ -134,7 +134,7 @@ describe('Cassandra >', function (done) {
         it ('should throw an error trying to clone a bad options object', () => {
             assert.throws(() => {
                 var circular = {
-                    foo: function () {}, 
+                    foo: function () {},
                     keyspace: {
                         foo: {
                             withReplication: {}
@@ -465,7 +465,8 @@ describe('Cassandra >', function (done) {
                 testSchema = new Cassandra.Schema({
                     username: 'text',
                     age: 'int',
-                    name: 'text'
+                    name: 'text',
+                    mappedKey: 'text' //mapped for case-sensitivity
                 }, {
                     primaryKeys: ['username', 'age'],
                     views: {
@@ -590,6 +591,47 @@ describe('Cassandra >', function (done) {
                         assert(rows[0] instanceof TestModel);
                         assert.equal(rows[0].username, 'foo');
                         assert.equal(rows[0].age, 30);
+                        done();
+                    });
+                });
+                it ('should error with invalid params', (done) => {
+                    TestModel.find.apply(TestModel, [{username: 'foo', age: 30}, ['fii'], (err, rows) => {
+                        if (err) {
+                            return done();
+                        }
+                        done(new Error('Should have thrown an error'));
+                    }]);
+                });
+                it.skip ('should error with invalid projection', (done) => {
+                    TestModel.find.apply(TestModel, [{username: 'foo', age: 30}, ['fii'], (err, rows) => {
+                        if (err) {
+                            return done();
+                        }
+                        done(new Error('Should have thrown an error'));
+                    }]);
+                });
+                it ('should maintain a mapping of case-sensitive fields', (done) => {
+                    TestModel.find({username: 'foo', age: 30}, (err, rows) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        assert.equal(rows.length, 1);
+                        assert(rows[0] instanceof TestModel);
+                        assert.equal(rows[0].username, 'foo');
+                        assert.equal(rows[0].age, 30);
+                        assert.deepEqual(Object.keys(rows[0]), ['age', 'mappedKey', 'name', 'username'], 'did not use the right order/likely wrong column family used');
+                        done();
+                    });
+                });
+                it ('should maintain a mapping of case-sensitive fields with raw option', (done) => {
+                    TestModel.find({username: 'foo', age: 30}, {raw: true}, (err, rows) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        assert.equal(rows.length, 1);
+                        assert.equal(rows[0].username, 'foo');
+                        assert.equal(rows[0].age, 30);
+                        assert.deepEqual(Object.keys(rows[0]), ['username', 'age', 'name', 'mappedKey'], 'did not use the right order/likely wrong column family used');
                         done();
                     });
                 });
@@ -1120,14 +1162,14 @@ describe('Cassandra >', function (done) {
                         TestModel.name), next)
             ], done);
         });
-        
+
         it ('should be able to create views and attach them to the model', (done) => {
             TestModel = cassandra.model('testschema', testSchema, (err, rows) => {
                 if (err) {
                     return done(err);
                 }
                 var query = 'SELECT view_name FROM system_schema.views WHERE keyspace_name = \''
-                        + cassandra.keyspace + "' and view_name in (" 
+                        + cassandra.keyspace + "' and view_name in ("
                         + Object.keys(TestModel.views).map((key) => "'" + TestModel.views[key].qualifiedName + "'").join(',')
                         + ')';
                 cassandra.driver.execute(query, (err, result) => {
