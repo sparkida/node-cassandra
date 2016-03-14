@@ -35,6 +35,24 @@ describe('Cassandra >', function (done) {
     after((done) => {
         cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, done);
     });
+    it ('should throw an error trying to clone a bad options object', () => {
+        assert.throws(() => {
+            var circular = {
+                foo: function () {}, 
+                keyspace: {
+                    foo: {}
+                }
+            };
+            circular.circular = circular;
+            new Cassandra(circular);
+        }, (err) => {
+            return err instanceof Error
+                && err.message === 'Invalid options object, could not clone';
+        });
+    });
+    it ('should be able to open up mutliple connections', (done) => {
+        cassandra.connect(done);
+    });
     it ('should fail at connecting without a keyspace', () => {
         assert.throws(() => {
             Cassandra.connect();
