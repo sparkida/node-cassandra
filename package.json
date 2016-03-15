@@ -1,0 +1,40 @@
+{
+  "name": "node-cassandra",
+  "version": "0.0.1",
+  "description": "Cassandra ORM for NodeJS, built atop the Cassandra driver.",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/.bin/mocha --recursive --reporter spec --bail",
+    "cover": "rm -rf ./coverage; ./node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec --recursive",
+    "report": "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vertebrae-org/cassandra-orm.git"
+  },
+  "keywords": [
+    "cassandra",
+    "orm"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vertebrae-org/cassandra-orm/issues"
+  },
+  "dependencies": {
+    "async": "^1.5.2",
+    "cassandra-driver": "^3.0.1"
+  },
+  "devDependencies": {
+    "coveralls": "^2.11.8",
+    "grunt": "^0.4.5",
+    "grunt-cli": "^0.1.13",
+    "grunt-contrib-jshint": "^1.0.0",
+    "grunt-contrib-watch": "^0.6.1",
+    "grunt-shell": "^1.2.1",
+    "istanbul": "^0.4.2",
+    "jit-grunt": "^0.10.0",
+    "jsdoc": "^3.4.0",
+    "mocha": "^2.4.5",
+    "time-grunt": "^1.3.0"
+  }
+}

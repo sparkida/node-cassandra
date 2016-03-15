@@ -1,0 +1,9 @@
+node_modules
+.env
+npm-debug.log*
+coverage
+.DS_Store
+*.swp
+*.Trashes
+*~
+docs/
