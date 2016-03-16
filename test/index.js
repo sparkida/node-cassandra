@@ -594,6 +594,24 @@ describe('Cassandra >', function (done) {
                         done();
                     });
                 });
+                it ('should be able perform a basic find all with an empty queryObject', (done) => {
+                    TestModel.find({}, (err, rows) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        assert.equal(rows.length, 3);
+                        done();
+                    });
+                });
+                it ('should be able perform a basic find without a queryObject', (done) => {
+                    TestModel.find((err, rows) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        assert.equal(rows.length, 3);
+                        done();
+                    });
+                });
                 it ('should error with invalid params', (done) => {
                     TestModel.find.apply(TestModel, [{username: 'foo', age: 30}, ['fii'], (err, rows) => {
                         if (err) {
@@ -1276,7 +1294,10 @@ describe('Cassandra >', function (done) {
 
         describe('Find >', () => {
             before((done) => {
-                TestModel.insert({username: 'foo', age: 30, name: 'bar'}, done);
+                async.parallel([
+                    (next) => TestModel.insert({username: 'foo', age: 30, name: 'bar'}, next),
+                    (next) => TestModel.insert({username: 'foos', age: 32, name: 'baz'}, next)
+                ], done);
             });
 
             it ('should be able to find rows specific to the materialized view and return an array', (done) => {
@@ -1301,6 +1322,24 @@ describe('Cassandra >', function (done) {
                         assert.equal(Object.keys(row[0])[0], 'age', 'did not use the right order/likely wrong column family used');
                         done();
                     }
+                });
+            });
+            it ('should be able perform a basic find all with an empty queryObject', (done) => {
+                TestModel.views.byName.find({}, (err, rows) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    assert.equal(rows.length, 2);
+                    done();
+                });
+            });
+            it ('should be able perform a basic find without a queryObject', (done) => {
+                TestModel.views.byName.find((err, rows) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    assert.equal(rows.length, 2);
+                    done();
                 });
             });
         });
