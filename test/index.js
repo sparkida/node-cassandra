@@ -18,38 +18,32 @@ const config = {
 };
 
 config.keyspace[keyspaceName] = keyspaceConfig;
-var cassandra;
+const cassandra = new Cassandra(config);
 
-describe('Cassandra Headless >', () => {
-
-    before(() => {
-        cassandra = new Cassandra(config);
-    });
-    describe('Headless >', () => {
-        var schema, TestModel;
-        it ('should be able to create schemas without a connection', () => {
-            schema = new Cassandra.Schema({
-                foo: 'text',
-                name: 'text',
-                username: 'text'
-            }, {
-                primaryKeys: ['foo'],
-                views: {
-                    byName: {
-                        primaryKeys: ['name']
-                    }
+describe('Cassandra Class >', () => {
+    var schema, TestModel;
+    it ('should be able to create schemas without a connection', () => {
+        schema = new Cassandra.Schema({
+            foo: 'text',
+            name: 'text',
+            username: 'text'
+        }, {
+            primaryKeys: ['foo'],
+            views: {
+                byName: {
+                    primaryKeys: ['name']
                 }
-            });
+            }
         });
-        it ('should be able to create models without a connection', () => {
-            TestModel = cassandra.model('testmodelfoo', schema);
+    });
+    it ('should be able to create models without a connection', () => {
+        TestModel = cassandra.model('testmodelfoo', schema);
+    });
+    it ('should be able to create materialized views without a connection', () => {
+        TestModel.model.createView('byUsername', {
+            primaryKeys: ['username']
         });
-        it ('should be able to create materialized views without a connection', () => {
-            TestModel.model.createView('byUsername', {
-                primaryKeys: ['username']
-            });
-            assert(!!TestModel.views.byUsername);
-        });
+        assert(!!TestModel.views.byUsername);
     });
 });
 
@@ -59,7 +53,9 @@ describe('Cassandra >', function (done) {
 
     this.timeout(5000);
 
+    var connecting = false;
     it('should be able to connect and process a queue', (done) => {
+        connecting = true;
         cassandra.connect();
         cassandra.on('error', done);
         cassandra.once('connect', () => {
@@ -67,9 +63,23 @@ describe('Cassandra >', function (done) {
             done();
         });
     });
+    if (!connecting) {
+        before((done) => {
+            console.log('connecting');
+            cassandra.connect(done);
+        });
+    }
+    /*
     after((done) => {
-        cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, done);
+        async.parallel([
+            (next) => cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, next),
+            (next) => cassandra.driver.execute('DROP KEYSPACE testfail', next)
+        ], (err) => {
+            //don't care if this fails
+            done();
+        });
     });
+    */
 
     describe('Connecting >', () => {
         it ('should properly error on failed connection attempts', (done) => {
@@ -244,7 +254,50 @@ describe('Cassandra >', function (done) {
                     });
                 });
             });
+            it ('should be able to create a schema using list types', () => {
+                assert.doesNotThrow(() => {
+                    new Cassandra.Schema({
+                        name: 'text',
+                        emails: {
+                            type: {
+                                list: 'text'
+                            }
+                        }
+                    }, {
+                        primaryKeys: ['name']
+                    });
+                });
+            });
+            it ('should be able to create a schema using map types', () => {
+                assert.doesNotThrow(() => {
+                    new Cassandra.Schema({
+                        name: 'text',
+                        emails: {
+                            type: {
+                                map: ['timestamp', 'text']
+                            }
+                        }
+                    }, {
+                        primaryKeys: ['name']
+                    });
+                });
+            });
+            it ('should be able to create a schema using set types', () => {
+                assert.doesNotThrow(() => {
+                    new Cassandra.Schema({
+                        name: 'text',
+                        emails: {
+                            type: {
+                                set: 'text'
+                            }
+                        }
+                    }, {
+                        primaryKeys: ['name']
+                    });
+                });
+            });
         });
+
         describe('Validation >', () => {
             it ('should fail at creating schema if there are no primaryKeys', () => {
                 assert.throws(() => {
@@ -310,13 +363,19 @@ describe('Cassandra >', function (done) {
         });
     });
 
-    describe('Model >', () => {
+    describe.only('Model >', () => {
         var testPartition,
             testPartitionModel,
             testCompound,
             testCompoundModel,
             testComposite,
-            testCompositeModel;
+            testCompositeModel,
+            testListModel,
+            testMapModel,
+            testSetModel,
+            testList,
+            testMap,
+            testSet;
         before(() => {
             testPartition = new Cassandra.Schema({
                 username: 'text',
@@ -338,14 +397,56 @@ describe('Cassandra >', function (done) {
             }, {
                 primaryKeys: [['username', 'name'], 'age'] //composite keys
             });
+            testList = new Cassandra.Schema({
+                usernames: {
+                    type: {
+                        list: 'text'
+                    }
+                },
+                name: 'text',
+                age: 'int'
+            }, {
+                primaryKeys: ['name'],
+                indexes: ['usernames']
+            });
+            testSet = new Cassandra.Schema({
+                usernames: {
+                    type: {
+                        set: 'text'
+                    }
+                },
+                name: 'text',
+                age: 'int'
+            }, {
+                primaryKeys: ['name']
+            });
+            testMap = new Cassandra.Schema({
+                usernames: {
+                    type: {
+                        map: ['timestamp', 'text']
+                    }
+                },
+                name: 'text',
+                age: 'int'
+            }, {
+                primaryKeys: ['name']
+            });
         });
+        /*
         after(() => {
+            //map all the qualified names to a drop table function
             async.parallel([
-                (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, testPartitionModel.qualifiedName), next),
-                (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, testCompositeModel.qualifiedName), next),
-                (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, testCompoundModel.qualifiedName), next)
-            ], done);
+                testPartitionModel.qualifiedName,
+                testCompositeModel.qualifiedName,
+                testCompoundModel.qualifiedName,
+                testListModel.qualifiedName,
+                testSetModel.qualifiedName,
+                testMapModel.qualifiedName
+            ].map((tableName) => {
+                return (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, tableName), next);
+            }), done);
         });
+        */
         it.skip ('should be able to create a table with table options object', () => {
         });
         it ('should fail at creating a Model without a Cassandra instance(db)', () => {
@@ -377,6 +478,13 @@ describe('Cassandra >', function (done) {
                 (next) => testPartitionModel = cassandra.model('testpartition', testPartition, next),
                 (next) => testCompoundModel = cassandra.model('testcompound', testCompound, next),
                 (next) => testCompositeModel = cassandra.model('testcomposite', testComposite, next)
+            ], done);
+        });
+        it ('should be able to attach a model to the db instance and create indexes on it', (done) => {
+            async.parallel([
+                (next) => testListModel = cassandra.model('testlist', testList, next),
+                (next) => testSetModel = cassandra.model('testset', testSet, next),
+                (next) => testMapModel = cassandra.model('testmap', testMap, next)
             ], done);
         });
         it ('should fail at buiding the schema after instantiation', () => {
@@ -518,7 +626,14 @@ describe('Cassandra >', function (done) {
                 });
             });
 
-            describe('Insert >', () => {
+            describe.only('Insert >', () => {
+                before((done) => {
+                    async.parallel([
+                        (next) => testListModel = cassandra.model('testlist', testList, next),
+                        (next) => testSetModel = cassandra.model('testset', testSet, next),
+                        (next) => testMapModel = cassandra.model('testmap', testMap, next)
+                    ], done);
+                });
                 it ('should be able to perform a basic insert', (done) => {
                     async.parallel([
                         (next) => TestModel.insert({username: 'foo', age: 30, name: 'bar'}, next),
@@ -526,8 +641,19 @@ describe('Cassandra >', function (done) {
                         (next) => TestModel.insert({username: 'baz', age: 32, name: 'bars'}, next)
                     ], done);
                 });
-
-                it.skip ('should be able to insert list types', () => {
+                it ('should be able to insert list types', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType', usernames: {$contains: 'baz'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            console.log(row);
+                        });
+                    };
+                    testListModel.insert({usernames: ['baz', 'bars'], age: 32, name: 'ListType'}, check);
                 });
                 it.skip ('should be able to insert map types', () => {
                 });
