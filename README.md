@@ -28,7 +28,7 @@ NodeJS Versions Supported:
 Examples
 --------
 
-- Getting Connected
+<h4>Getting Connected</h4>
 
 ```javacript
 var Cassandra = require('node-cassandra');
@@ -50,12 +50,19 @@ cassandra.on('connect', (err) => console.log('connected'));
 ```
 
 
-- Creating your first Schema, Model and Materialized View
+<h4>Creating your first Schema, Model and Materialized View</h4>
 
 ```javascript
 //create a new schema
 var schema = new Cassandra.Schema({
-    username: 'text',
+    id: {
+        type: 'uuid',
+        default: Cassandra.uuid
+    },
+    username: {
+        type: 'text',
+        required: true
+    },
     name: 'text',
     age: 'int'
 }, {
@@ -72,26 +79,24 @@ var schema = new Cassandra.Schema({
 
 //attach static method
 schema.statics.findFoo = function (callback) {
-    this.views.byAge.findOne({name: 'bar'}, callback);  
+    this.views.byName.findOne({name: 'bar'}, callback);  
 };
 
 //create model
-var model = cassandra.model('testModel', schema, () => {
-
-    //insert some data
-    model.insert({username: 'foo', name: 'bar', age: 30}, (err, result) => {
-        if (err) {
-            throw err;
-        }
-
-        //find the data
-        model.findFoo((err, row) => {
-            if (err) {
-                throw err;
-            }
-            console.log(row);
-        });
-    });
+var TestModel = cassandra.model('testModel', schema); //optional, callback);
+var test = new TestModel({
+    name: 'bar',
+    username: 'foo',
+    age: 30
 });
 
+test.save((err) => {
+    if (err) {
+        throw err;
+    }
+    console.log('test saved!');
+    test.age = 29;
+    test.save();
+    //test.age updated
+});
 ```
