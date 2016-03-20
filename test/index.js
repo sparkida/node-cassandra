@@ -25,10 +25,14 @@ describe('Cassandra Class >', () => {
     it ('should be able to create schemas without a connection', () => {
         schema = new Cassandra.Schema({
             foo: 'text',
+            fii: 'text',
+            bar: 'text',
+            baz: 'text',
             name: 'text',
             username: 'text'
         }, {
             primaryKeys: ['foo'],
+            indexes: ['baz'],
             views: {
                 byName: {
                     primaryKeys: ['name']
@@ -36,10 +40,18 @@ describe('Cassandra Class >', () => {
             }
         });
     });
-    it ('should be able to create models without a connection', () => {
+    it ('should be able to queue and instantiate models without a connection', () => {
         TestModel = cassandra.model('testmodelfoo', schema);
     });
-    it ('should be able to create materialized views without a connection', () => {
+    it ('should be able to queue and instantiate indexes without a connection', () => {
+        TestModel.model.createIndex('fii');
+        assert(TestModel.model.indexes.fii, format('%s_%s_idx', TestModel.name, 'fii'));
+    });
+    it ('should be able to queue and instantiate indexes with custom names without a connection', () => {
+        TestModel.model.createIndex({bar: 'test_model_index'});
+        assert(TestModel.model.indexes.bar, 'test_model_index');
+    });
+    it ('should be able to queue and instantiate materialized views without a connection', () => {
         TestModel.model.createView('byUsername', {
             primaryKeys: ['username']
         });
@@ -56,20 +68,13 @@ describe('Cassandra >', function (done) {
     var connecting = false;
     it('should be able to connect and process a queue', (done) => {
         connecting = true;
-        cassandra.connect();
         cassandra.on('error', done);
         cassandra.once('connect', () => {
             cassandra.removeListener('error', done);
             done();
         });
+        cassandra.connect();
     });
-    if (!connecting) {
-        before((done) => {
-            console.log('connecting');
-            cassandra.connect(done);
-        });
-    }
-    /*
     after((done) => {
         async.parallel([
             (next) => cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, next),
@@ -79,7 +84,6 @@ describe('Cassandra >', function (done) {
             done();
         });
     });
-    */
 
     describe('Connecting >', () => {
         it ('should properly error on failed connection attempts', (done) => {
@@ -363,7 +367,7 @@ describe('Cassandra >', function (done) {
         });
     });
 
-    describe.only('Model >', () => {
+    describe('Model >', () => {
         var testPartition,
             testPartitionModel,
             testCompound,
@@ -418,7 +422,8 @@ describe('Cassandra >', function (done) {
                 name: 'text',
                 age: 'int'
             }, {
-                primaryKeys: ['name']
+                primaryKeys: ['name'],
+                indexes: ['usernames']
             });
             testMap = new Cassandra.Schema({
                 usernames: {
@@ -429,10 +434,10 @@ describe('Cassandra >', function (done) {
                 name: 'text',
                 age: 'int'
             }, {
-                primaryKeys: ['name']
+                primaryKeys: ['name'],
+                indexes: ['usernames']
             });
         });
-        /*
         after(() => {
             //map all the qualified names to a drop table function
             async.parallel([
@@ -446,7 +451,6 @@ describe('Cassandra >', function (done) {
                 return (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, tableName), next);
             }), done);
         });
-        */
         it.skip ('should be able to create a table with table options object', () => {
         });
         it ('should fail at creating a Model without a Cassandra instance(db)', () => {
@@ -485,7 +489,15 @@ describe('Cassandra >', function (done) {
                 (next) => testListModel = cassandra.model('testlist', testList, next),
                 (next) => testSetModel = cassandra.model('testset', testSet, next),
                 (next) => testMapModel = cassandra.model('testmap', testMap, next)
-            ], done);
+            ], (err) => {
+                if (err) {
+                    return done(err);
+                }
+                assert.equal(testListModel.model.indexes.usernames, 'usernames');
+                assert.equal(testSetModel.model.indexes.usernames, 'usernames');
+                assert.equal(testMapModel.model.indexes.usernames, 'usernames');
+                done();
+            });
         });
         it ('should fail at buiding the schema after instantiation', () => {
             assert.throws(() => testPartitionModel.model._buildSchema());
@@ -626,7 +638,7 @@ describe('Cassandra >', function (done) {
                 });
             });
 
-            describe.only('Insert >', () => {
+            describe('Insert >', () => {
                 before((done) => {
                     async.parallel([
                         (next) => testListModel = cassandra.model('testlist', testList, next),
@@ -650,14 +662,45 @@ describe('Cassandra >', function (done) {
                             if (err) {
                                 return done(err);
                             }
-                            console.log(row);
+                            assert.deepEqual(row.usernames, ['baz', 'bars']);
+                            done();
                         });
                     };
                     testListModel.insert({usernames: ['baz', 'bars'], age: 32, name: 'ListType'}, check);
                 });
-                it.skip ('should be able to insert map types', () => {
+                it ('should be able to insert set types', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testSetModel.findOne({name: 'SetType', usernames: {$contains: 'baz'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.deepEqual(row.usernames, ['bars', 'baz']);
+                            done();
+                        });
+                    };
+                    testSetModel.insert({usernames: ['baz', 'bars'], age: 32, name: 'SetType'}, check);
                 });
-                it.skip ('should be able to insert set types', () => {
+                it ('should be able to insert map types and find with "$containsKey"', (done) => {
+                    var userMap = {};
+                    var userMapKey = Date();
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testMapModel.findOne({name: 'MapType', usernames: {$containsKey: userMapKey}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert(row.usernames[userMapKey]);
+                            assert.equal(row.usernames[userMapKey], 'fii');
+                            done();
+                        });
+                    };
+                    userMap[userMapKey] = 'fii';
+                    testMapModel.insert({usernames: userMap, age: 32, name: 'MapType'}, check);
                 });
             });
 
@@ -888,11 +931,334 @@ describe('Cassandra >', function (done) {
                         done(err);
                     });
                 });
-                it.skip ('should be able to update list types', () => {
+                it ('should be able to perform an update on a multiple values', (done) => {
+                    TestModel.update({username: 'foo', age: 30}, {name: 'test3', mappedKey: 'foo'}, (err, rows) => {
+                        done(err);
+                    });
                 });
-                it.skip ('should be able to update map types', () => {
+                it ('should be able to update list types by changing the entire column', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType', usernames: {$contains: 'bar'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.deepEqual(row.usernames, ['bar']);
+                            done();
+                        });
+                    };
+                    testListModel.update({
+                        name: 'ListType'
+                    }, {
+                        usernames: ['bar']
+                    }, check);
                 });
-                it.skip ('should be able to update set types', () => {
+                it ('should be able to update list types by appending items', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType', usernames: {$contains: 'foo'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.equal(row.name, 'ListType');
+                            assert.deepEqual(row.usernames, ['bar', 'foo']);
+                            done();
+                        });
+                    };
+                    testListModel.update({
+                        name: 'ListType'
+                    }, {
+                        usernames: {
+                            $append: ['foo']
+                        }
+                    }, check);
+                });
+                it ('should be able to update list types by appending multiple items', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType', usernames: {$contains: 'yee'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.equal(row.name, 'ListType');
+                            assert.deepEqual(row.usernames, ['bar', 'foo', 'yee', 'haw']);
+                            done();
+                        });
+                    };
+                    testListModel.update({
+                        name: 'ListType'
+                    }, {
+                        usernames: {
+                            $append: ['yee', 'haw']
+                        }
+                    }, check);
+                });
+                it ('should be able to update list types by prepending items', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType', usernames: {$contains: 'fii'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.equal(row.name, 'ListType');
+                            assert.deepEqual(row.usernames, ['fii', 'bar', 'foo', 'yee', 'haw']);
+                            done();
+                        });
+                    };
+                    testListModel.update({
+                        name: 'ListType'
+                    }, {
+                        usernames: {
+                            $prepend: ['fii']
+                        }
+                    }, check);
+                });
+                it ('should be able to update list types by prepending multiple items', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType', usernames: {$contains: 'foi'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.equal(row.name, 'ListType');
+                            assert.deepEqual(row.usernames, ['foi', 'fui', 'fii', 'bar', 'foo', 'yee', 'haw']);
+                            done();
+                        });
+                    };
+                    testListModel.update({
+                        name: 'ListType'
+                    }, {
+                        usernames: {
+                            $prepend: ['foi', 'fui']
+                        }
+                    }, check);
+                });
+                it ('should be able to update list types by prepending and appending items', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType', usernames: {$contains: 'cho'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.equal(row.name, 'ListType');
+                            assert.deepEqual(row.usernames, ['cho', 'foi', 'fui', 'fii', 'bar', 'foo', 'yee', 'haw', 'cow']);
+                            done();
+                        });
+                    };
+                    testListModel.update({
+                        name: 'ListType'
+                    }, {
+                        usernames: {
+                            $append: ['cow'],
+                            $prepend: ['cho']
+                        }
+                    }, check);
+                });
+                it ('should be able to update list types by filtering items', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType', usernames: {$contains: 'bar'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.equal(row.name, 'ListType');
+                            assert.deepEqual(row.usernames, ['bar', 'foo']);
+                            done();
+                        });
+                    };
+                    testListModel.update({
+                        name: 'ListType'
+                    }, {
+                        usernames: {
+                            $filter: ['cho', 'foi', 'fui', 'fii', 'cow', 'yee', 'haw']
+                        }
+                    }, check);
+                });
+                it ('should be able to update list types by using an index', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType', usernames: {$contains: 'foo'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.equal(row.name, 'ListType');
+                            assert.deepEqual(row.usernames, ['foo', 'baz']);
+                            done();
+                        });
+                    };
+                    testListModel.update({
+                        name: 'ListType'
+                    }, {
+                        usernames: {
+                            $set: {
+                                0: 'foo',
+                                1: 'baz'
+                            }
+                        }
+                    }, check);
+                });
+                it ('should be able to add new values to existing sets', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testSetModel.findOne({name: 'SetType', usernames: {$contains: 'aba'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.deepEqual(row.usernames, ['aba', 'bars', 'baz']);
+                            done();
+                        });
+                    };
+                    testSetModel.update({
+                        name: 'SetType'
+                    }, {
+                        usernames: {
+                            $add: ['aba']
+                        }
+                    }, check);
+                });
+                it ('should be able to remove values from existing sets', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testSetModel.findOne({name: 'SetType', usernames: {$contains: 'aba'}}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.deepEqual(row.usernames, ['aba', 'baz']);
+                            done();
+                        });
+                    };
+                    testSetModel.update({
+                        name: 'SetType'
+                    }, {
+                        usernames: {
+                            $filter: ['bars']
+                        }
+                    }, check);
+                });
+                it ('should be able to update a set to empty', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testSetModel.findOne({name: 'SetType'}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.deepEqual(row.usernames, null);
+                            done();
+                        });
+                    };
+                    testSetModel.update({
+                        name: 'SetType'
+                    }, {
+                        usernames: []
+                    }, check);
+                });
+                it ('should be able to update a map value to null', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testMapModel.findOne({name: 'MapType'}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.deepEqual(row.usernames, null);
+                            done();
+                        });
+                    };
+                    testMapModel.update({
+                        name: 'MapType'
+                    }, {
+                        usernames: {}
+                    }, check);
+                });
+
+                it ('should be able to update a map value', (done) => {
+                    var mapKey = Date();
+                    var mapObject = {};
+                    var mapChange = {};
+                    mapObject[mapKey] = 'foo';
+                    mapChange[mapKey] = 'fii';
+                    var check = (err) => {
+                        testMapModel.findOne({
+                            name: 'MapType'
+                        }, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert(!!row);
+                            assert.equal(row.usernames[mapKey], 'fii');
+                            done();
+                        });
+                    };
+                    var next = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testMapModel.update({
+                            name: 'MapType'
+                        }, {
+                            usernames: mapChange
+                        }, check);
+                    };
+                    testMapModel.update({
+                        name: 'MapType'
+                    }, {
+                        usernames: mapObject
+                    }, next);
+                });
+                it ('should be able to add a new map value', (done) => {
+                    var mapKey = Date();
+                    var mapObject = {};
+                    mapObject[mapKey] = 'foo';
+                    var check = (err) => {
+                        testMapModel.findOne({
+                            name: 'MapType'
+                        }, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert(!!row);
+                            assert.equal(row.usernames[mapKey], 'foo');
+                            done();
+                        });
+                    };
+                    var next = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testMapModel.update({
+                            name: 'MapType'
+                        }, {
+                            usernames: {$add: mapObject}
+                        }, check);
+                    };
+                    testMapModel.update({
+                        name: 'MapType'
+                    }, {
+                        usernames: mapObject
+                    }, next);
                 });
             });
 
@@ -927,7 +1293,7 @@ describe('Cassandra >', function (done) {
                             age: 31
                         },
                         options = {
-                            usingTimestamp: (Date.now() - 10000) * 1000
+                            $usingTimestamp: (Date.now() - 10000) * 1000
                         };
                     TestModel.delete(query, options, (err, result) => {
                         if (err) {
@@ -950,7 +1316,7 @@ describe('Cassandra >', function (done) {
                             age: 31
                         },
                         options = {
-                            usingTimestamp: (Date.now() + 10000) * 1000
+                            $usingTimestamp: (Date.now() + 10000) * 1000
                         };
                     TestModel.delete(query, options, (err, result) => {
                         if (err) {
@@ -967,11 +1333,143 @@ describe('Cassandra >', function (done) {
                         }
                     });
                 });
-                it.skip ('should be able to delete list types', () => {
+                it ('should be able to delete list types by index', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType'}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.deepEqual(row.usernames, ['foo']);
+                            done();
+                        });
+                    };
+                    testListModel.delete({
+                        name: 'ListType'
+                    }, {
+                        usernames: [1] //remove second index
+                    }, check);
                 });
-                it.skip ('should be able to delete map types', () => {
+                it ('should be able to delete list types by index and column', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType'}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.equal(row.age, null);
+                            assert.equal(row.usernames, null);
+                            testListModel.insert({usernames: ['baz', 'bars', 'foo', 'fii'], age: 32, name: 'ListType'}, done);
+                        });
+                    };
+                    testListModel.delete({
+                        name: 'ListType'
+                    }, {
+                        age: 1,
+                        usernames: [0] //remove first index
+                    }, check);
                 });
-                it.skip ('should be able to delete set types', () => {
+                it ('should be able to delete list types with multiple indexes', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testListModel.findOne({name: 'ListType'}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.equal(row.age, null);
+                            assert.deepEqual(row.usernames, ['bars', 'fii']);
+                            done();
+                        });
+                    };
+                    testListModel.delete({
+                        name: 'ListType'
+                    }, {
+                        age: 1,
+                        usernames: [0, 2] //remove first and third index
+                    }, check);
+                });
+                it ('should be able to delete set types', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testSetModel.findOne({name: 'SetType'}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.deepEqual(row.usernames, null);
+                            done();
+                        });
+                    };
+                    testSetModel.delete({
+                        name: 'SetType'
+                    }, {
+                        usernames: 1
+                    }, check);
+                });
+                it ('should be able to delete map types by their keys', (done) => {
+                    var row = null;
+                    var map = [];
+                    var mapKey = '';
+                    var newMap = {};
+                    var newMapKey = Date();
+                    newMap[newMapKey] = 'hello world';
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testMapModel.findOne({name: 'MapType'}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            
+                            done();
+                        });
+                    };
+                    var test = () => {
+                        mapKey = new Date(Object.keys(row.usernames)[0]).toISOString();
+                        map.push(mapKey);
+                        testMapModel.delete({
+                            name: 'MapType'
+                        }, {
+                            usernames: map
+                        }, check);
+                    };
+                    var find = () => {
+                        testMapModel.findOne({name: 'MapType'}, (err, result) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            row = result;
+                            test();
+                        });
+                    };
+                    testMapModel.update({name: 'MapType'}, {usernames: {$add: newMap}}, find);
+                });
+                it ('should be able to delete map types', (done) => {
+                    var check = (err) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        testMapModel.findOne({name: 'MapType'}, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert.deepEqual(row.usernames, null);
+                            done();
+                        });
+                    };
+                    testMapModel.delete({
+                        name: 'MapType'
+                    }, {
+                        usernames: 1
+                    }, check);
                 });
             });//}}}
         });
@@ -1211,7 +1709,7 @@ describe('Cassandra >', function (done) {
             });
 
             describe('Delete >', () => {
-                it('should be able to delete a column from the instance\'s column family using projections', (done) => {
+                it('should be able to delete a column from the instance\'s column family', (done) => {
                     var user = new UserModel({
                             hex: Cassandra.uuid(),
                             names: 'primTest2',
@@ -1221,7 +1719,7 @@ describe('Cassandra >', function (done) {
                         if (err) {
                             return done(err);
                         }
-                        user.delete(['username'], (err) => {
+                        user.delete({username: 1}, (err) => {
                             assert(!err, err);
                             UserModel.findOne({names: 'primTest2'}, (err, row) => {
                                 if (err) {
@@ -1257,6 +1755,22 @@ describe('Cassandra >', function (done) {
                     });
                 });
             });
+        });
+    });
+
+    describe('Indexes >', () => {
+        var indexSchema, IndexModel;
+        before((done) => {
+            indexSchema = new Cassandra.Schema({
+                name: 'text',
+                username: 'text'
+            }, {
+                primaryKeys: ['name']
+            });
+            IndexModel = cassandra.model('testmodelindexes', indexSchema, done);
+        });
+        it ('should be able to create Indexes after the model has been instantiated', (done) => {
+            IndexModel.model.createIndex('username', done);
         });
     });
 
