@@ -30,8 +30,9 @@
  * Vertebrae Inc
  * @package Cassandra-ORM
  * @exports Model
- * @exports Model.AbstractModel
+ * @exports Model.TypeMaps
  * @exports Model.BaseModel
+ * @exports Model.AbstractModel
  */
 "use strict";
 
@@ -47,20 +48,24 @@ const OperatorMap = {
     $eq: '='
 };
 
+
+const TypeMap = {};
+const dataTypes = Cassandra.types.dataTypes;
+Object.keys(dataTypes).forEach((keys, index) => {
+    TypeMap[keys] = index + 5;
+});
+//Mapping collection types for better expressions, only collections will be less than 4
+TypeMap.list = 1;
+TypeMap.set = 2;
+TypeMap.map = 3;
+
 const FilterMap = {
     $in: 'IN',
     $contains: 'CONTAINS',
     $containsKey: 'CONTAINS KEY'
 };
 
-const getArgCount = (args) => {
-    var argc = args.length;
-    while (argc &amp;&amp; !args[argc-1]) {
-        argc -= 1;
-    }
-    return argc;
-};
-
+const getArgCount = Cassandra.utils.getArgCount;
 /**
  * Create a new Cassandra Model attached to a {@link Cassandra.Schema} on the named table and creating the table if it doesn't exist. In general, you should use the instanced method {@link Cassandra#model} to attach models
  * @memberof Cassandra
@@ -274,6 +279,9 @@ class AbstractModel {
         } else if (argc === 2) {
             callback = projection;
             projection = null;
+        } else if (argc === 1) {
+            callback = queryObject;
+            queryObject = null;
         }
         if (typeof callback !== 'function') {
             throw new Error('Callback must be a function!');
@@ -284,13 +292,23 @@ class AbstractModel {
         var Factory = model.Factory;
         var queryComponents = model._buildQueryComponents(queryObject);
         var cassandra = model.db;
-        var query = format(
+        var query;
+        if (queryComponents.where.length > 0) {
+            query = format(
                 'SELECT %s FROM %s.%s WHERE %s',
                 projection ? projection.join(', ') : '*',
                 cassandra.keyspace,
                 model.qualifiedName,
                 queryComponents.where
             );
+        } else {
+            query = format(
+                'SELECT %s FROM %s.%s',
+                projection ? projection.join(', ') : '*',
+                cassandra.keyspace,
+                model.qualifiedName
+            );
+        }
         if (options) {
             if (options.__$$findOne) {
                 findOne = true;
@@ -359,19 +377,51 @@ class AbstractModel {
     update(queryObject, updateObject, callback) {
         var model = this;
         var cassandra = model.db;
+        var dataModel = model.schema.model;
         var queryComponents = model._buildQueryComponents(queryObject);
         var set = [];
         var setValues = [];
         for (let column in updateObject) {
-            //is this a special operator character
-            if (column === '$set') {
+            let typeMapping = TypeMap[dataModel[column]];
+            let value = updateObject[column];
+            //is this a special operator character for set,list
+            if (typeMapping &lt; TypeMap.map &amp;&amp; !Array.isArray(value)) {
+                for (let action in value) {
+                    if (action === '$append' || action === '$add') {
+                        set.push(column + ' = ' + column + ' + ?');
+                        setValues.push(value[action]);
+                    } else if (action === '$prepend') {
+                        set.push(column + ' = ? + ' + column);
+                        setValues.push(value[action]);
+                    } else if (action === '$filter') {
+                        set.push(column + ' = ' + column + ' - ?');
+                        setValues.push(value[action]);
+                    } else if (action === '$set') {
+                        let obj = value[action];
+                        for (let index in obj) {
+                            set.push(column + '[' + index + ']' + ' = ?');
+                            setValues.push(obj[index]);
+                        }
+                    }
+                }
+            } else if (typeMapping === TypeMap.map) {
+                //reset the entire map object to the $set object
+                if (value.$set) {
+                    set.push(column + '=?');
+                    setValues.push(updateObject[column].$set);
+                } else {
+                    //[setKey: setValue] = value[action];
+                    for (let setKey in value) {
+                        set.push(column + '[?] = ?');
+                        setValues.push(setKey, value[setKey]);
+                    }
+                }
             } else {
                 //plain value, assume set
-                set.push(column);
+                set.push(column + '=?');
                 setValues.push(updateObject[column]);
             }
         }
-        set = set.join('=?, ') + '=?';
         var query = format(
                 'UPDATE %s.%s SET %s WHERE %s',
                 cassandra.keyspace,
@@ -385,11 +435,11 @@ class AbstractModel {
     /**
      * Delete columns or rows in the model's column family
      * @param {object} queryObject - an object representing column:value
-     * @param {array} projection - projection for selecting a subset of columns in select statements
+     * @param {array} deleteObject - deleteObject for selecting a subset of columns in select statements
      * @param {function} callback - receives err, result
      * @example
-     * var projection = ['name']; //default "*"
-     * var options = {
+     * var deleteObject = ['name']; //default "*"
+     * var deleteObject = {
      *   usingTimestamp: Date.now()
      * };
      * var query = {
@@ -398,37 +448,54 @@ class AbstractModel {
      *     $gt: 30
      *   }
      * };
-     * cassandra.delet(query, projection, (err, result) => console.log(err, result));
+     * cassandra.delete(query, deleteObject, (err, result) => console.log(err, result));
      * // DELETE name FROM &lt;table> WHERE name = 'foo' AND age > 30
      */
-    delete(queryObject, projection, options, callback) {
+    delete(queryObject, deleteObject, callback) {
         var argc = getArgCount(arguments);
-        if (argc === 3) {
-            callback = options;
-            //if projection is an object then it's the options object
-            if (!Array.isArray(projection)) {
-                options = projection;
-                projection = null;
-            }
-        } else if (argc === 2) {
-            callback = projection;
-            projection = null;
+        if (argc === 2) {
+            callback = deleteObject;
+            deleteObject = null;
         }
         if (typeof callback !== 'function') {
             throw new Error('Callback must be a function!');
         }
         var model = this;
+        var dataModel = model.schema.model;
         var queryComponents = model._buildQueryComponents(queryObject);
         var cassandra = model.db;
-        var query = 'DELETE' + (projection ? ' ' + projection.join(', ') : '');
-        query += ' FROM ' + cassandra.keyspace + '.' + model.name;
-        if (options) {
-            if (options.usingTimestamp) {
-                query += ' USING TIMESTAMP ' + options.usingTimestamp;
+        var unset = [];
+        var unsetValues = [];
+        for (let column in deleteObject) {
+            let type = dataModel[column];
+            let typeMapping = TypeMap[type];
+            //is this a special operator eg: $usingTimestamp, in which case
+            //it won't have a type mapping
+            if (!type) {
+                continue;
+            }
+            let value = deleteObject[column];
+            //check if list type is an object with $pull operator
+            if (typeMapping === TypeMap.list &amp;&amp; Array.isArray(value)) {
+                unset.push(value.map((index) => column + '[' + index + ']'));
+            } else if (typeMapping === TypeMap.map &amp;&amp; Array.isArray(value)) {
+                unset.push(value.map((index) => {
+                    unsetValues.push(index);
+                    return column + '[?]';
+                }));
+            } else {
+                unset.push(column);
+            }
+        }
+        var query = 'DELETE ' + (unset.length ? unset + ' ' : '')
+            + 'FROM ' + cassandra.keyspace + '.' + model.name;
+        if (deleteObject) {
+            if (deleteObject.$usingTimestamp) {
+                query += ' USING TIMESTAMP ' + deleteObject.$usingTimestamp;
             }
         }
         query += ' WHERE ' + queryComponents.where;
-        cassandra.driver.execute(query, queryComponents.values, {prepare: true}, callback);
+        cassandra.driver.execute(query, unsetValues.concat(queryComponents.values), {prepare: true}, callback);
     }
 
     /**
@@ -474,6 +541,7 @@ for (let method of abstractMethods) {
 }
 
 
+Model.TypeMap = TypeMap;
 Model.BaseModel = BaseModel;
 Model.AbstractModel = AbstractModel;
 
@@ -494,7 +562,7 @@ module.exports = Model;
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Mon Mar 14 2016 21:27:21 GMT+0000 (UTC)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Sun Mar 20 2016 19:47:40 GMT+0000 (UTC)
 </footer>
 
 <script> prettyPrint(); </script>

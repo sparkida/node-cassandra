@@ -45,22 +45,58 @@
     <section>
         <article><h1>node-cassandra  <a href="https://travis-ci.org/vertebrae-org/node-cassandra"><img src="https://travis-ci.org/vertebrae-org/node-cassandra.svg?branch=master" alt="Build Status"></a> <a href="https://coveralls.io/github/vertebrae-org/node-cassandra?branch=master"><img src="https://coveralls.io/repos/github/vertebrae-org/node-cassandra/badge.svg?branch=master" alt="Coverage Status"></a></h1><!-- badge image references -->
 <p>Cassandra ORM for NodeJS, based on the <strong><em>cassandra-driver</em></strong> module.</p>
-<p>Read the <a href="http://vertebrae-org.github.io/node-cassandra">full API Documentation</a>.</p>
-<p>NodeJS Versions Supported:</p>
+<p><strong>Read the</strong> <a href="http://vertebrae-org.github.io/node-cassandra">full API Documentation</a>.</p>
+<p><strong>Examples:</strong></p>
 <ul>
-<li>5.8.0</li>
-<li>5.7.1</li>
-<li>5.6.0</li>
-<li>5.5.0</li>
-<li>5.4.1</li>
-<li>5.3.0</li>
-<li>5.2.0</li>
-<li>5.1.1</li>
-<li>5.0.0</li>
+<li><a href="#user-content-getting-started">Getting Started</a><ul>
+<li><a href="#user-content-connecting-to-the-database">Connecting</a></li>
+<li><a href="#user-content-creating-your-first-schema-model-and-materialized-view">Your first Schema, Model, and Materialized View</a></li>
 </ul>
-<h2>Examples</h2><h4>Getting Connected</h4>
+</li>
+<li><a href="#user-content-static-methods">Static Methods</a></li>
+<li><a href="#user-content-list-types">Working with List Types</a><ul>
+<li><a href="#user-content-inserting-lists">Inserting Lists</a></li>
+<li><a href="#user-content-updating-lists">Updating Lists</a></li>
+<li><a href="#user-content-updating-lists-by-index">Updating Lists By Index</a></li>
+<li><a href="#user-content-deleting-lists-by-column-or-index">Deleting Lists</a></li>
+</ul>
+</li>
+<li><a href="#user-content-set-types">Working with Set Types</a><ul>
+<li><a href="#user-content-inserting-sets">Inserting Sets</a></li>
+<li><a href="#user-content-updating-sets">Updating Sets</a></li>
+<li><a href="#user-content-deleting-sets">Deleting Sets</a></li>
+</ul>
+</li>
+<li><a href="#user-content-map-types">Working with Map Types</a><ul>
+<li><a href="#user-content-inserting-maps">Inserting Maps</a></li>
+<li><a href="#user-content-updating-maps">Updating Maps</a></li>
+<li><a href="#user-content-deleting-maps-by-keys">Deleting Maps by Keys</a></li>
+<li><a href="#user-content-deleting-maps">Deleting Maps</a></li>
+</ul>
+</li>
+</ul>
+<h4>Cassandra Known Versions Supported:</h4>
+  - 3.0.4
+  - 3.4
 
-<pre class="prettyprint source lang-javacript"><code>var Cassandra = require('node-cassandra');
+<h4>NodeJS Versions Supported:</h4>
+  - 5.8.0
+  - 5.7.1
+  - 5.6.0
+  - 5.5.0
+  - 5.4.1
+  - 5.3.0
+  - 5.2.0
+  - 5.1.1
+  - 5.0.0
+
+
+
+<h3>Getting Started</h3>
+
+<h4>Connecting to the database</h4>
+
+<pre class="prettyprint source lang-javascript"><code>var Cassandra = require('node-cassandra');
 var config = {
     contactPoints: ['127.0.0.1:9042'], 
     protocolOptions: {port: 9042},
@@ -101,27 +137,330 @@ var schema = new Cassandra.Schema({
     }
 });
 
-//attach static method
-schema.statics.findFoo = function (callback) {
-    this.views.byName.findOne({name: 'bar'}, callback);  
-};
-
 //create model
-var TestModel = cassandra.model('testModel', schema); //optional, callback);
+var TestModel = cassandra.model('testModel', schema, (err) => {
+    test.save((err) => {
+        if (err) {
+            throw err;
+        }
+        console.log('test saved!');
+        test.age = 29;
+        test.save((err) => {...});
+        //test.age updated
+    });
+});
+
 var test = new TestModel({
     name: 'bar',
     username: 'foo',
     age: 30
+});</code></pre><h3>Working with Collections and Indexes</h3>
+
+<p><h4>List Types</h4></p>
+<pre class="prettyprint source lang-javascript"><code>//create a new schema
+var schema = new Cassandra.Schema({
+    name: 'text',
+    usernames: {
+        type: {
+            list: 'text'
+        }
+    }
+}, {
+    indexes: ['usernames'], //create an index on the usernames column
+    primaryKeys: ['name']
+});</code></pre><p><h5>Inserting lists</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//create model
+var TestModel = cassandra.model('testModel', schema, (err) => {
+    var test = new TestModel({
+        name: 'bar',
+        usernames: ['foo', 'bar']
+    });
+    test.save(() => {
+        TestModel.findOne({
+            usernames: {
+                $contains: 'foo'
+            }
+        }, (err, row) => {
+            console.log(row.usernames); //['foo', 'bar']
+        });
+    });
+});</code></pre><p><h5>Updating lists</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//following above
+var query = {
+    name: 'bar',
+    usernames: {
+        $contains: 'foo'
+    }
+};
+var updateObject = {
+    usernames: {
+        $filter: ['foo'], //remove items matching &quot;foo&quot;
+        $append: ['baz'], //append item &quot;baz&quot;
+        $prepend: ['fii'] //prepend item &quot;fii&quot;
+    }
+};
+TestModel.update(query, updateObject, (err) => {
+    if (err) {
+        return console.log(err):
+    }
+    TestModel.findOne({usernames: {$contains: 'baz'}}, (err, row) => {
+        console.log(row.usernames); //['fii', 'bar', 'baz']
+    });
+});</code></pre><p><h5>Updating lists by index</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//following above
+var query = {
+    name: 'bar',
+    usernames: {
+        $contains: 'bar'
+    }
+};
+var updateObject = {
+    usernames: {
+        $set: {
+            0: 'foo'
+        }
+    }
+};
+TestModel.update(query, updateObject, (err) => {
+    if (err) {
+        return console.log(err):
+    }
+    TestModel.findOne(query, (err, row) => {
+        console.log(row.usernames); //['foo', 'bar', 'baz']
+    });
+});</code></pre><p><h5>Deleting lists by column or index</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//following above
+var query = {
+    name: 'bar',
+    usernames: {
+        $contains: 'fii'
+    }
+};
+var deleteObject = {
+    usernames: [0,2] //delete first and last index
+};
+TestModel.delete(query, deleteObject, (err) => {
+    if (err) {
+        return console.log(err):
+    }
+    TestModel.findOne({usernames: {$contains: 'bar'}}, (err, row) => {
+
+        console.log(row.usernames); //['bar']
+
+        TestModel.delete({
+            usernames: {
+                $contains: 'bar'
+            }
+        }, {
+            usernames: 1 //delete usernames column
+        }, (err) => {...});
+
+    });
+});</code></pre><p><h4>Set Types</h4></p>
+<pre class="prettyprint source lang-javascript"><code>//create a new schema
+var schema = new Cassandra.Schema({
+    name: 'text',
+    usernames: {
+        type: {
+            set: 'text'
+        }
+    }
+}, {
+    indexes: ['usernames'], //create an index on the usernames column
+    primaryKeys: ['name']
+});</code></pre><p><h5>Inserting sets</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//create model
+var TestModel = cassandra.model('testModel', schema, (err) => {
+    var test = new TestModel({
+        name: 'bar',
+        usernames: ['foo', 'bar']
+    });
+    test.save(() => {
+        TestModel.findOne({
+            usernames: {
+                $contains: 'foo'
+            }
+        }, (err, row) => {
+            console.log(row.usernames); //['bar', 'foo']
+        });
+    });
+});</code></pre><p><h5>Updating sets</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//following above
+var query = {
+    name: 'bar',
+    usernames: {
+        $contains: 'bar'
+    }
+};
+var updateObject = {
+    usernames: {
+        $add: ['aba', 'boa'],
+        $filter: ['foo']
+    }
+};
+TestModel.update(query, updateObject, (err) => {
+    if (err) {
+        return console.log(err):
+    }
+    TestModel.findOne(query, (err, row) => {
+        console.log(row.usernames); //['aba', 'bar', 'boa']
+    });
+});</code></pre><p><h5>Update sets to null</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//following above
+var query = {
+    name: 'bar',
+    usernames: {
+        $contains: 'bar'
+    }
+};
+var updateObject = {
+    usernames: [] //or null
+};
+TestModel.update(query, updateObject, (err) => {
+    if (err) {
+        return console.log(err):
+    }
+    TestModel.findOne(query, (err, row) => {
+        console.log(row.usernames); //null
+    });
+});</code></pre><p><h5>Deleting sets</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//not much you can do with deleting sets
+var query = {
+    name: 'bar',
+    usernames: {
+        $contains: 'fii'
+    }
+};
+var deleteObject = {
+    usernames: 1 //delete usernames column
+};
+TestModel.delete(query, deleteObject, (err) => {
+    if (err) {
+        return console.log(err):
+    }
+    TestModel.findOne({name: 'bar'}, (err, row) => {
+        console.log(row.usernames); //null
+    });
+});</code></pre><p><h4>Map Types</h4></p>
+<pre class="prettyprint source lang-javascript"><code>//create a new schema
+var schema = new Cassandra.Schema({
+    name: 'text',
+    usernames: {
+        type: {
+            map: ['text', 'int']
+        }
+    }
+}, {
+    indexes: ['usernames'], //create an index on the usernames column keys
+    primaryKeys: ['name']
+});</code></pre><p><h5>Inserting maps</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//create model
+var TestModel = cassandra.model('testModel', schema, (err) => {
+    var test = new TestModel({
+        name: 'bar',
+        usernames: {
+            $set: {
+                foo: 2, 
+                bar: 4
+            }
+        }
+    });
+    test.save(() => {
+        TestModel.findOne({
+            usernames: {
+                $containsKey: 'foo' //use containsKey for maps
+            }
+        }, (err, row) => {
+            console.log(row.usernames.foo); // 2
+        });
+    });
+});</code></pre><p><h5>Updating maps</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//following above
+var query = {
+    name: 'bar',
+    usernames: {
+        $containsKey: 'bar'
+    }
+};
+var updateObject = {
+    usernames: {
+        foo: 5, //update &quot;foo&quot; to 5
+        fii: 7 /set &quot;fii&quot; to 7
+    }
+};
+TestModel.update(query, updateObject, (err) => {
+    if (err) {
+        return console.log(err):
+    }
+    TestModel.findOne(query, (err, row) => {
+        console.log(row.usernames.foo); // 5
+    });
+});</code></pre><p><h5>Deleting maps by Keys</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//not much you can do with deleting maps
+var query = {
+    name: 'bar',
+    usernames: {
+        $containsKey: 'bar'
+    }
+};
+var deleteObject = {
+    usernames: ['foo']
+};
+TestModel.delete(query, deleteObject, (err) => {
+    if (err) {
+        return console.log(err):
+    }
+    TestModel.findOne(query, (err, row) => {
+        console.log(row.usernames.foo); // undefined
+    });
+});</code></pre><p><h5>Deleting maps</h5></p>
+<pre class="prettyprint source lang-javascript"><code>//not much you can do with deleting maps
+var query = {
+    name: 'bar',
+    usernames: {
+        $containsKey: 'bar'
+    }
+};
+var deleteObject = {
+    usernames: 1
+};
+TestModel.delete(query, deleteObject, (err) => {
+    if (err) {
+        return console.log(err):
+    }
+    TestModel.findOne(query, (err, row) => {
+        console.log(row.usernames); // null
+    });
+});</code></pre><h2>Static Methods</h2><pre class="prettyprint source lang-javascript"><code>//create a new schema
+var schema = new Cassandra.Schema({
+    id: {
+        type: 'uuid',
+        default: Cassandra.uuid
+    },
+    username: {
+        type: 'text',
+        required: true
+    },
+    name: 'text'
+}, {
+    primaryKeys: ['username'],
+    views: {
+        byName: {
+            primaryKeys: ['name']
+        },
+    }
 });
 
-test.save((err) => {
-    if (err) {
-        throw err;
-    }
-    console.log('test saved!');
-    test.age = 29;
-    test.save();
-    //test.age updated
+//attach static method - fat arrow functions won't work here as we need the context to change
+schema.statics.findByName = function (name, callback) {
+    this.views.byName.findOne({name: name}, callback);  
+};
+
+//create model
+var TestModel = cassandra.model('testModel', schema, (err) => {
+    TestModel.findByName('foo', (err, row) => {
+        console.log(row.name); // &quot;foo&quot;
+    });
 });</code></pre></article>
     </section>
 
@@ -139,7 +478,7 @@ test.save((err) => {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Mon Mar 14 2016 21:27:21 GMT+0000 (UTC)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Sun Mar 20 2016 19:47:40 GMT+0000 (UTC)
 </footer>
 
 <script> prettyPrint(); </script>
