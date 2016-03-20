@@ -664,7 +664,7 @@ describe('Cassandra >', function (done) {
                 it ('should be able to perform a basic insert', (done) => {
                     async.parallel([
                         (next) => TestModel.insert({
-                            username: 'foo', 
+                            username: 'foo',
                             age: 30,
                             name: 'bar',
                             testlist: ['foo'],
@@ -810,15 +810,15 @@ describe('Cassandra >', function (done) {
                         if (err) {
                             return done();
                         }
-                        done(new Error('Should have thrown an error'));
+                        done(new Error('Should have returned an error'));
                     }]);
                 });
-                it.skip ('should error with invalid projection', (done) => {
-                    TestModel.find.apply(TestModel, [{username: 'foo', age: 30}, ['fii'], (err, rows) => {
+                it ('should error with invalid projection', (done) => {
+                    TestModel.find.apply(TestModel, [{username: 'foo', age: 30}, ['fii','fox'], (err, rows) => {
                         if (err) {
                             return done();
                         }
-                        done(new Error('Should have thrown an error'));
+                        done(new Error('Should have returned an error'));
                     }]);
                 });
                 it ('should maintain a mapping of case-sensitive fields', (done) => {
@@ -1247,7 +1247,9 @@ describe('Cassandra >', function (done) {
                     testMapModel.update({
                         name: 'MapType'
                     }, {
-                        usernames: {}
+                        usernames: {
+                            $set: {}
+                        }
                     }, check);
                 });
 
@@ -1285,10 +1287,13 @@ describe('Cassandra >', function (done) {
                         usernames: mapObject
                     }, next);
                 });
+
                 it ('should be able to add a new map value', (done) => {
                     var mapKey = Date();
+                    var secondKey = new Date(0);
                     var mapObject = {};
                     mapObject[mapKey] = 'foo';
+                    mapObject[secondKey] = 'baz';
                     var check = (err) => {
                         testMapModel.findOne({
                             name: 'MapType'
@@ -1301,21 +1306,36 @@ describe('Cassandra >', function (done) {
                             done();
                         });
                     };
-                    var next = (err) => {
-                        if (err) {
-                            return done(err);
-                        }
-                        testMapModel.update({
+                    testMapModel.update({
+                        name: 'MapType'
+                    }, {
+                        usernames: {$set: mapObject}
+                    }, check);
+                });
+                it ('should be able to add a new item and update an existing', (done) => {
+                    var mapKey = new Date(1E6);
+                    var secondKey = new Date(0);
+                    var mapObject = {};
+                    mapObject[mapKey] = 'fox';
+                    mapObject[secondKey] = 'bar';
+                    var check = (err) => {
+                        testMapModel.findOne({
                             name: 'MapType'
-                        }, {
-                            usernames: {$add: mapObject}
-                        }, check);
+                        }, (err, row) => {
+                            if (err) {
+                                return done(err);
+                            }
+                            assert(!!row);
+                            assert.equal(row.usernames[mapKey], 'fox');
+                            assert.equal(row.usernames[secondKey], 'bar');
+                            done();
+                        });
                     };
                     testMapModel.update({
                         name: 'MapType'
                     }, {
                         usernames: mapObject
-                    }, next);
+                    }, check);
                 });
             });
 
@@ -1472,11 +1492,11 @@ describe('Cassandra >', function (done) {
                 });
                 it ('should be able to delete map types by their keys', (done) => {
                     var row = null;
-                    var map = [];
-                    var mapKey = '';
                     var newMap = {};
                     var newMapKey = Date();
+                    var secondKey = new Date(0);
                     newMap[newMapKey] = 'hello world';
+                    newMap[secondKey] = 'foo';
                     var check = (err) => {
                         if (err) {
                             return done(err);
@@ -1485,17 +1505,19 @@ describe('Cassandra >', function (done) {
                             if (err) {
                                 return done(err);
                             }
-                            
+                            assert(!!row);
+                            assert(!!row.usernames);
+                            assert(!!row.usernames[secondKey]);
+                            assert(!row.usernames[newMapKey]);
+                            assert.equal(row.usernames[secondKey], 'foo');
                             done();
                         });
                     };
                     var test = () => {
-                        mapKey = new Date(Object.keys(row.usernames)[0]).toISOString();
-                        map.push(mapKey);
                         testMapModel.delete({
                             name: 'MapType'
                         }, {
-                            usernames: map
+                            usernames: [newMapKey]
                         }, check);
                     };
                     var find = () => {
@@ -1507,7 +1529,7 @@ describe('Cassandra >', function (done) {
                             test();
                         });
                     };
-                    testMapModel.update({name: 'MapType'}, {usernames: {$add: newMap}}, find);
+                    testMapModel.update({name: 'MapType'}, {usernames: {$set: newMap}}, find);
                 });
                 it ('should be able to delete map types', (done) => {
                     var check = (err) => {
