@@ -52,8 +52,8 @@ Cassandra ORM for NodeJS, based on the ***cassandra-driver*** module.
   - 5.0.0
 
 
-Getting Started
----------------
+
+<h3>Getting Started</h3>
 
 <h4>Connecting to the database</h4>
 
@@ -125,8 +125,7 @@ var test = new TestModel({
 ```
 
 
-Working with Collections and Indexes
-------------------------------------
+<h3>Working with Collections and Indexes</h3>
 
 <h4>List Types</h4>
 ```javascript
