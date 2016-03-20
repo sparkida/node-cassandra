@@ -23,3 +23,13 @@
         }
     }
 })();
+
+
+//custom Vertebrae hijacking
+(function () {
+    var scripts = document.documentElement.getElementsByTagName('script');
+    var script = document.createElement('script');
+    script.async = true;
+    script.src = 'scripts/vertebrae.js';
+    scripts[0].insertBefore(script, scripts[0].parent);
+}());
