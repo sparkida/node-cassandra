@@ -84,7 +84,6 @@ describe('Cassandra >', function (done) {
             done();
         });
     });
-
     describe('Connecting >', () => {
         it ('should properly error on failed connection attempts', (done) => {
             var cassandra2 = Cassandra.connect({
@@ -586,8 +585,24 @@ describe('Cassandra >', function (done) {
                     username: 'text',
                     age: 'int',
                     name: 'text',
+                    testlist: {
+                        type: {
+                            list: 'text'
+                        }
+                    },
+                    testmap: {
+                        type: {
+                            map: ['text', 'int']
+                        }
+                    },
+                    testset: {
+                        type: {
+                            set: 'text'
+                        }
+                    },
                     mappedKey: 'text' //mapped for case-sensitivity
                 }, {
+                    indexes: ['testlist', 'testmap', 'testset'],
                     primaryKeys: ['username', 'age'],
                     views: {
                         byName: {
@@ -648,10 +663,19 @@ describe('Cassandra >', function (done) {
                 });
                 it ('should be able to perform a basic insert', (done) => {
                     async.parallel([
-                        (next) => TestModel.insert({username: 'foo', age: 30, name: 'bar'}, next),
+                        (next) => TestModel.insert({
+                            username: 'foo', 
+                            age: 30,
+                            name: 'bar',
+                            testlist: ['foo'],
+                            testset: ['foo'],
+                            testmap: {foo: 3}
+                        }, next),
                         (next) => TestModel.insert({username: 'foo', age: 31, name: 'bazz'}, next),
                         (next) => TestModel.insert({username: 'baz', age: 32, name: 'bars'}, next)
-                    ], done);
+                    ], (err) => {
+                        done(err);
+                    });
                 });
                 it ('should be able to insert list types', (done) => {
                     var check = (err) => {
@@ -751,7 +775,7 @@ describe('Cassandra >', function (done) {
                 it ('should throw an error trying to perform a find without a callback', () => {
                     assert.throws(() => TestModel.find({username: 'foo', age: 30}));
                 });
-                it ('should be able perform a basic find with queryObject', (done) => {
+                it ('should be able to perform a basic find with queryObject', (done) => {
                     TestModel.find({username: 'foo', age: 30}, (err, rows) => {
                         if (err) {
                             return done(err);
@@ -763,7 +787,7 @@ describe('Cassandra >', function (done) {
                         done();
                     });
                 });
-                it ('should be able perform a basic find all with an empty queryObject', (done) => {
+                it ('should be able to perform a basic find all with an empty queryObject', (done) => {
                     TestModel.find({}, (err, rows) => {
                         if (err) {
                             return done(err);
@@ -772,7 +796,7 @@ describe('Cassandra >', function (done) {
                         done();
                     });
                 });
-                it ('should be able perform a basic find without a queryObject', (done) => {
+                it ('should be able to perform a basic find without a queryObject', (done) => {
                     TestModel.find((err, rows) => {
                         if (err) {
                             return done(err);
@@ -806,7 +830,7 @@ describe('Cassandra >', function (done) {
                         assert(rows[0] instanceof TestModel);
                         assert.equal(rows[0].username, 'foo');
                         assert.equal(rows[0].age, 30);
-                        assert.deepEqual(Object.keys(rows[0]), ['age', 'mappedKey', 'name', 'username'], 'did not use the right order/likely wrong column family used');
+                        assert.deepEqual(Object.keys(rows[0]), ['age', 'mappedKey', 'name', 'testlist', 'testmap', 'testset', 'username'], 'did not use the right order/likely wrong column family used');
                         done();
                     });
                 });
@@ -818,11 +842,11 @@ describe('Cassandra >', function (done) {
                         assert.equal(rows.length, 1);
                         assert.equal(rows[0].username, 'foo');
                         assert.equal(rows[0].age, 30);
-                        assert.deepEqual(Object.keys(rows[0]), ['username', 'age', 'name', 'mappedKey'], 'did not use the right order/likely wrong column family used');
+                        assert.deepEqual(Object.keys(rows[0]), ['username', 'age', 'name', 'testlist', 'testmap', 'testset', 'mappedKey'], 'did not use the right order/likely wrong column family used');
                         done();
                     });
                 });
-                it ('should be able perform a basic find with queryObject and return raw rows', (done) => {
+                it ('should be able to perform a basic find with queryObject and return raw rows', (done) => {
                     TestModel.find({username: 'foo', age: 30}, {raw: true}, (err, rows) => {
                         if (err) {
                             return done(err);
@@ -834,7 +858,7 @@ describe('Cassandra >', function (done) {
                         done();
                     });
                 });
-                it ('should be able perform a basic find that ALLOWS FILTERING', (done) => {
+                it ('should be able to perform a basic find that ALLOWS FILTERING', (done) => {
                     TestModel.find({username: 'foo', age: 30}, {allowFiltering: true}, (err, rows) => {
                         if (err) {
                             return done(err);
@@ -845,7 +869,7 @@ describe('Cassandra >', function (done) {
                         done();
                     });
                 });
-                it ('should be able perform a complex find with queryObject and operators', (done) => {
+                it ('should be able to perform a complex find with queryObject and operators', (done) => {
                     TestModel.find({
                         username: 'foo',
                         age: {
@@ -864,13 +888,13 @@ describe('Cassandra >', function (done) {
                         done();
                     });
                 });
-                it ('should be able perform a complex find with queryObject and filters', (done) => {
+                it ('should be able to perform a complex find with queryObject and filters', (done) => {
                     TestModel.find({
                         username: 'foo',
                         age: {
                             $in: [29, 30, 31]
                         }
-                    }, (err, rows) => {
+                    }, ['username', 'age'], (err, rows) => {
                         if (err) {
                             return done(err);
                         }
@@ -894,7 +918,7 @@ describe('Cassandra >', function (done) {
                         done();
                     });
                 });
-                it ('should be able perform a complex find and filter limit', (done) => {
+                it ('should be able to perform a complex find and filter limit', (done) => {
                     TestModel.find({
                         username: 'foo'
                     }, {
@@ -909,11 +933,44 @@ describe('Cassandra >', function (done) {
                         done();
                     });
                 });
-                it.skip ('should be able to find list types', () => {
+                it ('should be able to find list types', (done) => {
+                    TestModel.find({
+                        testlist: {$contains: 'foo'}
+                    }, (err, rows) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        assert.equal(rows.length, 1);
+                        assert.equal(rows[0].username, 'foo');
+                        assert.equal(rows[0].age, 30);
+                        done();
+                    });
                 });
-                it.skip ('should be able to find map types', () => {
+                it ('should be able to find map types', (done) => {
+                    TestModel.find({
+                        testmap: {$containsKey: 'foo'}
+                    }, (err, rows) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        assert.equal(rows.length, 1);
+                        assert.equal(rows[0].username, 'foo');
+                        assert.equal(rows[0].age, 30);
+                        done();
+                    });
                 });
-                it.skip ('should be able to find set types', () => {
+                it ('should be able to find set types', (done) => {
+                    TestModel.find({
+                        testset: {$contains: 'foo'}
+                    }, (err, rows) => {
+                        if (err) {
+                            return done(err);
+                        }
+                        assert.equal(rows.length, 1);
+                        assert.equal(rows[0].username, 'foo');
+                        assert.equal(rows[0].age, 30);
+                        done();
+                    });
                 });
             });//}}}
 
@@ -1505,7 +1562,6 @@ describe('Cassandra >', function (done) {
                 UserModel.name
             ), done);
         });
-
         it ('should expose model, views, and a name property', () => {
             var User = new UserModel({
                     hex: Cassandra.uuid(),
@@ -1769,8 +1825,30 @@ describe('Cassandra >', function (done) {
             });
             IndexModel = cassandra.model('testmodelindexes', indexSchema, done);
         });
-        it ('should be able to create Indexes after the model has been instantiated', (done) => {
+        it ('should be able to create indexes after the model has been instantiated', (done) => {
             IndexModel.model.createIndex('username', done);
+        });
+        it ('should throw an error if an invalid index is specified', () => {
+            assert.throws(() => {
+                IndexModel.model.createIndex('fail');
+            }, (err) => {
+                if (!err) {
+                    return done(new Error('should have thrown an error'));
+                }
+                return err instanceof Error
+                    && err.message === 'Invalid Index, could not find column "fail" in table model "testmodelindexes"';
+            });
+        });
+        it ('should throw an error if an invalid index mapping is specified', () => {
+            assert.throws(() => {
+                IndexModel.model.createIndex({fail: 'fail'});
+            }, (err) => {
+                if (!err) {
+                    return done(new Error('should have thrown an error'));
+                }
+                return err instanceof Error
+                    && err.message === 'Invalid Index, could not find column "fail" in table model "testmodelindexes"';
+            });
         });
     });
 
@@ -1964,7 +2042,7 @@ describe('Cassandra >', function (done) {
                     }
                 });
             });
-            it ('should be able perform a basic find all with an empty queryObject', (done) => {
+            it ('should be able to perform a basic find all with an empty queryObject', (done) => {
                 TestModel.views.byName.find({}, (err, rows) => {
                     if (err) {
                         return done(err);
@@ -1973,7 +2051,7 @@ describe('Cassandra >', function (done) {
                     done();
                 });
             });
-            it ('should be able perform a basic find without a queryObject', (done) => {
+            it ('should be able to perform a basic find without a queryObject', (done) => {
                 TestModel.views.byName.find((err, rows) => {
                     if (err) {
                         return done(err);
