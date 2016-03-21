@@ -1,4 +1,9 @@
 'use strict';
+
+//will run "after" calls
+const CLEAN = true;
+
+
 const assert = require('assert');
 const Cassandra = require('../');
 const keyspaceName = 'testkeyspace';
@@ -75,15 +80,17 @@ describe('Cassandra >', function (done) {
         });
         cassandra.connect();
     });
-    after((done) => {
-        async.parallel([
-            (next) => cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, next),
-            (next) => cassandra.driver.execute('DROP KEYSPACE testfail', next)
-        ], (err) => {
-            //don't care if this fails
-            done();
+    if (CLEAN) {
+        after((done) => {
+            async.parallel([
+                (next) => cassandra.driver.execute('DROP KEYSPACE ' + cassandra.keyspace, next),
+                (next) => cassandra.driver.execute('DROP KEYSPACE testfail', next)
+            ], (err) => {
+                //don't care if this fails
+                done();
+            });
         });
-    });
+    }
     describe('Connecting >', () => {
         it ('should properly error on failed connection attempts', (done) => {
             var cassandra2 = Cassandra.connect({
@@ -225,6 +232,7 @@ describe('Cassandra >', function (done) {
             assert(!!schema.defaults.fooBar);
             assert.equal(schema.defaults.fooBar(), 'fooname');
         });
+
         describe('Keys >', () => {
             it ('should create a Schema object with single partition key', () => {
                 assert.doesNotThrow(() => {
@@ -257,6 +265,9 @@ describe('Cassandra >', function (done) {
                     });
                 });
             });
+        });
+
+        describe('Collections >', () => {
             it ('should be able to create a schema using list types', () => {
                 assert.doesNotThrow(() => {
                     new Cassandra.Schema({
@@ -437,19 +448,21 @@ describe('Cassandra >', function (done) {
                 indexes: ['usernames']
             });
         });
-        after(() => {
-            //map all the qualified names to a drop table function
-            async.parallel([
-                testPartitionModel.qualifiedName,
-                testCompositeModel.qualifiedName,
-                testCompoundModel.qualifiedName,
-                testListModel.qualifiedName,
-                testSetModel.qualifiedName,
-                testMapModel.qualifiedName
-            ].map((tableName) => {
-                return (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, tableName), next);
-            }), done);
-        });
+        if (CLEAN) {
+            after(() => {
+                //map all the qualified names to a drop table function
+                async.parallel([
+                    testPartitionModel.qualifiedName,
+                    testCompositeModel.qualifiedName,
+                    testCompoundModel.qualifiedName,
+                    testListModel.qualifiedName,
+                    testSetModel.qualifiedName,
+                    testMapModel.qualifiedName
+                ].map((tableName) => {
+                    return (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, tableName), next);
+                }), done);
+            });
+        }
         it.skip ('should be able to create a table with table options object', () => {
         });
         it ('should fail at creating a Model without a Cassandra instance(db)', () => {
@@ -616,22 +629,24 @@ describe('Cassandra >', function (done) {
                 });
                 TestModel = cassandra.model('teststatic', testSchema, done);
             });
-            after((done) => {
-                async.series([
-                    (next) => cassandra.driver.execute(format(
-                            'DROP TABLE %s.%s',
-                            cassandra.keyspace,
-                            'teststatic2'), next),
-                    (next) => cassandra.driver.execute(format(
-                            'DROP MATERIALIZED VIEW %s.%s',
-                            cassandra.keyspace,
-                            TestModel.name + '__byname'), next),
-                    (next) => cassandra.driver.execute(format(
-                            'DROP TABLE %s.%s',
-                            cassandra.keyspace,
-                            TestModel.name), next)
-                ], done);
-            });
+            if (CLEAN) { 
+                after((done) => {
+                    async.series([
+                        (next) => cassandra.driver.execute(format(
+                                'DROP TABLE %s.%s',
+                                cassandra.keyspace,
+                                'teststatic2'), next),
+                        (next) => cassandra.driver.execute(format(
+                                'DROP MATERIALIZED VIEW %s.%s',
+                                cassandra.keyspace,
+                                TestModel.name + '__byname'), next),
+                        (next) => cassandra.driver.execute(format(
+                                'DROP TABLE %s.%s',
+                                cassandra.keyspace,
+                                TestModel.name), next)
+                    ], done);
+                });
+            }
             it ('should be able to attach static methods to a schema that persist onto the model', (done) => {
                 schema.statics.findFoo = function (callback) {
                     return this.findOne({name: 'foo'}, callback);
@@ -1577,13 +1592,15 @@ describe('Cassandra >', function (done) {
             });
             UserModel = cassandra.model('testinstance', schema, done);
         });
-        after((done) => {
-            cassandra.driver.execute(format(
-                'DROP TABLE %s.%s',
-                cassandra.keyspace,
-                UserModel.name
-            ), done);
-        });
+        if (CLEAN) {
+            after((done) => {
+                cassandra.driver.execute(format(
+                    'DROP TABLE %s.%s',
+                    cassandra.keyspace,
+                    UserModel.name
+                ), done);
+            });
+        }
         it ('should expose model, views, and a name property', () => {
             var User = new UserModel({
                     hex: Cassandra.uuid(),
@@ -1901,25 +1918,27 @@ describe('Cassandra >', function (done) {
                 }
             });
         });
-        //delete views and drop column family
-        after((done) => {
-            async.series([
-                (next) => async.each([
-                        TestModel.views.byAge.qualifiedName,
-                        TestModel.views.byName.qualifiedName,
-                        TestModel.views.byNameAndAge.qualifiedName
-                    ], (viewName, cb) => {
-                        cassandra.driver.execute(format(
-                            'DROP MATERIALIZED VIEW %s.%s',
+        if (CLEAN) {
+            //delete views and drop column family
+            after((done) => {
+                async.series([
+                    (next) => async.each([
+                            TestModel.views.byAge.qualifiedName,
+                            TestModel.views.byName.qualifiedName,
+                            TestModel.views.byNameAndAge.qualifiedName
+                        ], (viewName, cb) => {
+                            cassandra.driver.execute(format(
+                                'DROP MATERIALIZED VIEW %s.%s',
+                                cassandra.keyspace,
+                                viewName), cb);
+                        }, next),
+                    (next) => cassandra.driver.execute(format(
+                            'DROP TABLE %s.%s',
                             cassandra.keyspace,
-                            viewName), cb);
-                    }, next),
-                (next) => cassandra.driver.execute(format(
-                        'DROP TABLE %s.%s',
-                        cassandra.keyspace,
-                        TestModel.name), next)
-            ], done);
-        });
+                            TestModel.name), next)
+                ], done);
+            });
+        }
 
         it ('should be able to create views and attach them to the model', (done) => {
             TestModel = cassandra.model('testschema', testSchema, (err, rows) => {
@@ -1942,6 +1961,91 @@ describe('Cassandra >', function (done) {
                 });
             });
         });
+
+        describe('Keys >', () => {
+            it ('should create a Materialized View with single partition key', (done) => {
+                var schema = new Cassandra.Schema({
+                    username: 'text',
+                    age: 'int'
+                }, {
+                    primaryKeys: ['age'],
+                    views: {
+                        byUsername: {
+                            primaryKeys: ['username']
+                        }
+                    }
+                });
+                cassandra.model('testviewpartitionkey', schema, (err) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    done();
+                });
+            });
+            it ('should create a Materialized View with compound keys', (done) => {
+                var schema = new Cassandra.Schema({
+                    name: 'text',
+                    username: 'text',
+                    age: 'int'
+                }, {
+                    primaryKeys: ['age'],
+                    views: {
+                        byUsername: {
+                            primaryKeys: ['age', 'username']
+                        }
+                    }
+                });
+                cassandra.model('testviewcompoundkey', schema, (err) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    done();
+                });
+            });
+            it ('should create a Materialized View with composite keys', (done) => {
+                var schema = new Cassandra.Schema({
+                    email: 'text',
+                    name: 'text',
+                    username: 'text',
+                    age: 'int'
+                }, {
+                    primaryKeys: [['age','username'], 'email'],
+                    views: {
+                        byUsername: {
+                            primaryKeys: [['age', 'username', 'name']] //will have "email" added
+                        }
+                    }
+                });
+                cassandra.model('testviewcompositekey1', schema, (err) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    done();
+                });
+            });
+            it ('should create a Materialized View that overrides composite keys from the table', (done) => {
+                var schema = new Cassandra.Schema({
+                    email: 'text',
+                    name: 'text',
+                    username: 'text',
+                    age: 'int'
+                }, {
+                    primaryKeys: [['age', 'username'], 'name'],
+                    views: {
+                        byUsername: {
+                            primaryKeys: [['age', 'username'], 'name', 'email']
+                        }
+                    }
+                });
+                cassandra.model('testviewcompositekey2', schema, (err) => {
+                    if (err) {
+                        return done(err);
+                    }
+                    done();
+                });
+            });
+        });
+
         it ('should throw an error trying to attach the same view twice', () => {
             assert.throws(() => TestModel.model.createView('byName', {}, null, null));
         });
