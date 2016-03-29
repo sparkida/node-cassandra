@@ -64,10 +64,12 @@ var config = {
     protocolOptions: {port: 9042},
     keyspace: {
         testkeyspace: {
-            class: 'SimpleStrategy',
-            replication_factor: 1
-        },
-        durableWrites: true
+            durableWrites: true,
+            withReplication: {
+                class: 'SimpleStrategy',
+                replication_factor: 1
+            }
+        }
     }
 };
 
