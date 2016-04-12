@@ -1,6 +1,6 @@
 {
   "name": "node-cassandra",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Cassandra ORM for NodeJS, built atop the Cassandra driver.",
   "main": "index.js",
   "scripts": {
