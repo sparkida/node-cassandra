@@ -1227,7 +1227,7 @@ describe('Cassandra >', function (done) {
                         }
                     }, check);
                 });
-                it ('should be able to update a set to empty', (done) => {
+                it ('should be able to update a set to empty array', (done) => {
                     var check = (err) => {
                         if (err) {
                             return done(err);
@@ -1236,7 +1236,7 @@ describe('Cassandra >', function (done) {
                             if (err) {
                                 return done(err);
                             }
-                            assert.deepEqual(row.usernames, null);
+                            assert.deepEqual(row.usernames, []);
                             done();
                         });
                     };
@@ -1246,7 +1246,7 @@ describe('Cassandra >', function (done) {
                         usernames: []
                     }, check);
                 });
-                it ('should be able to update a map value to null', (done) => {
+                it ('should be able to update a map value to empty array', (done) => {
                     var check = (err) => {
                         if (err) {
                             return done(err);
@@ -1255,7 +1255,7 @@ describe('Cassandra >', function (done) {
                             if (err) {
                                 return done(err);
                             }
-                            assert.deepEqual(row.usernames, null);
+                            assert.deepEqual(row.usernames, []);
                             done();
                         });
                     };
@@ -1454,7 +1454,7 @@ describe('Cassandra >', function (done) {
                                 return done(err);
                             }
                             assert.equal(row.age, null);
-                            assert.equal(row.usernames, null);
+                            assert.deepEqual(row.usernames, []);
                             testListModel.insert({usernames: ['baz', 'bars', 'foo', 'fii'], age: 32, name: 'ListType'}, done);
                         });
                     };
@@ -1495,7 +1495,7 @@ describe('Cassandra >', function (done) {
                             if (err) {
                                 return done(err);
                             }
-                            assert.deepEqual(row.usernames, null);
+                            assert.deepEqual(row.usernames, []);
                             done();
                         });
                     };
@@ -1555,7 +1555,7 @@ describe('Cassandra >', function (done) {
                             if (err) {
                                 return done(err);
                             }
-                            assert.deepEqual(row.usernames, null);
+                            assert.deepEqual(row.usernames, {});
                             done();
                         });
                     };
@@ -1586,7 +1586,22 @@ describe('Cassandra >', function (done) {
                     type: 'int',
                     default: 50
                 },
-                username: 'text'
+                username: 'text',
+                testList: {
+                    type: {
+                        list: 'text'
+                    }
+                },
+                testMap: {
+                    type: {
+                        map: ['text', 'int']
+                    }
+                },
+                testSet: {
+                    type: {
+                        set: 'text'
+                    }
+                }
             },{
                 primaryKeys: ['names']
             });
@@ -1618,7 +1633,8 @@ describe('Cassandra >', function (done) {
                     names: 'baz',
                     username: 'fii'
                 });
-            assert.deepEqual(Object.keys(user), ['age', 'hex', 'names', 'username'], 'did not properly enumerate object');
+            var match = ['age', 'hex', 'names', 'testList', 'testMap', 'testSet', 'username'];
+            assert.deepEqual(Object.keys(user), match, 'did not properly enumerate object');
         });
 
         describe('Validation >', () => {
