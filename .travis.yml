@@ -3,12 +3,14 @@ dist: trusty
 language: node_js
 before_install:
   - sudo rm -rf /var/lib/cassandra/*
-  - wget http://www.us.apache.org/dist/cassandra/3.0.4/apache-cassandra-3.0.4-bin.tar.gz && tar -xzf apache-cassandra-3.0.4-bin.tar.gz && sudo sh apache-cassandra-3.0.4/bin/cassandra -R
+  - docker run --hostname=VertebraeVM -p 9042:9042 -d vertebrae/cassandra:3.4r1
 script:
   - ./node_modules/.bin/grunt test
 after_success:
   - npm run report
 node_js:
+  - '5.10.1'
+  - '5.9.1'
   - '5.8.0'
   - '5.7.1'
   - '5.6.0'
