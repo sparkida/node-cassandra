@@ -1601,6 +1601,10 @@ describe('Cassandra >', function (done) {
                     type: {
                         set: 'text'
                     }
+                },
+                active: {
+                    type: 'boolean',
+                    default: false
                 }
             },{
                 primaryKeys: ['names']
@@ -1633,7 +1637,7 @@ describe('Cassandra >', function (done) {
                     names: 'baz',
                     username: 'fii'
                 });
-            var match = ['age', 'hex', 'names', 'testList', 'testMap', 'testSet', 'username'];
+            var match = ['active', 'age', 'hex', 'names', 'testList', 'testMap', 'testSet', 'username'];
             assert.deepEqual(Object.keys(user), match, 'did not properly enumerate object');
         });
 
@@ -1654,13 +1658,14 @@ describe('Cassandra >', function (done) {
                     });
                 assert(user.hex instanceof Cassandra.types.Uuid, 'not a valid guid');
             });
-            it ('should automatically set default values of type "function" by calling the function', () => {
+            it ('should automatically set default values of type "boolean"', () => {
                 var user = new UserModel({
                         names: 'baz',
                         age: 24,
                         username: 'fii'
                     });
                 assert(user.hex instanceof Cassandra.types.Uuid, 'not a valid guid');
+                assert.equal(user.active, false);
             });
             it ('should automatically set default values of all other types by copy', () => {
                 var user = new UserModel({
