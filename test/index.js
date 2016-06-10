@@ -386,6 +386,8 @@ describe('Cassandra >', function (done) {
             testCompositeModel,
             testListModel,
             testMapModel,
+            testOrderBy,
+            testOrderByModel,
             testSetModel,
             testList,
             testMap,
@@ -410,6 +412,15 @@ describe('Cassandra >', function (done) {
                 age: 'int'
             }, {
                 primaryKeys: [['username', 'name'], 'age'] //composite keys
+            });
+            testOrderBy = new Cassandra.Schema({
+                username: 'text',
+                age: 'int'
+            }, {
+                orderBy: {
+                    age: 'desc'
+                },
+                primaryKeys: ['username', 'age']
             });
             testList = new Cassandra.Schema({
                 usernames: {
@@ -456,6 +467,7 @@ describe('Cassandra >', function (done) {
                     testCompositeModel.qualifiedName,
                     testCompoundModel.qualifiedName,
                     testListModel.qualifiedName,
+                    testOrderByModel.qualifiedName,
                     testSetModel.qualifiedName,
                     testMapModel.qualifiedName
                 ].map((tableName) => {
@@ -463,7 +475,8 @@ describe('Cassandra >', function (done) {
                 }), done);
             });
         }
-        it.skip ('should be able to create a table with table options object', () => {
+        it ('should be able to create a table with table options object', (done) => {
+            testOrderByModel = cassandra.model('testorderby', testOrderBy, done);
         });
         it ('should fail at creating a Model without a Cassandra instance(db)', () => {
             assert.throws(() => {
@@ -580,7 +593,20 @@ describe('Cassandra >', function (done) {
                 assert.equal(table.clusteringKeys[0].name, testComposite.options.primaryKeys[1]);
                 done();
             });
-
+        });
+        it ('should create a table "testorderby" with clustering order', (done) => {
+            cassandra.driver.metadata.getTable(cassandra.keyspace, testOrderByModel.name, (err, table) => {
+                if (err) {
+                    return done(err);
+                }
+                assert.equal(table.name, testOrderByModel.name);
+                assert.equal(table.partitionKeys.length, 1);
+                assert.equal(table.partitionKeys[0].name, testOrderBy.options.primaryKeys[0]);
+                assert.equal(table.clusteringKeys.length, 1);
+                assert.equal(table.clusteringKeys[0].name, 'age');
+                assert.equal(table.clusteringOrder[0], 'DESC');
+                done();
+            });
         });
 
         describe('Static Methods >', () => {
