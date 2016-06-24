@@ -914,7 +914,7 @@ describe('Cassandra >', function (done) {
                     TestModel.find({
                         username: 'foo',
                         age: {
-                            $gt: 30,
+                            $gte: 30,
                             $lt: 50
                         }
                     }, (err, rows) => {
