@@ -3,7 +3,16 @@ dist: trusty
 language: node_js
 before_install:
   - sudo rm -rf /var/lib/cassandra/*
-  - docker run --hostname=VertebraeVM -p 9042:9042 -d vertebrae/cassandra:3.4r1
+  - docker run --name=cassandra
+        --env="CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"
+        --env="CASSANDRA_LISTEN_ADDRESS=127.0.0.1"
+        --env="CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch"
+        --env="CASSANDRA_VERSION=3.7"
+        --env="CASSANDRA_CONFIG=/etc/cassandra"
+        --net=host
+        -d vertebrae/cassandra:3.7.0
+        cassandra -f
+  - sleep 10
 script:
   - ./node_modules/.bin/grunt test
 after_success:
