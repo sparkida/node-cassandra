@@ -93,6 +93,13 @@ var schema = new Cassandra.Schema({
         type: 'text',
         required: true
     },
+    ageName: {
+        type: 'text',
+        default: (instance) => { 
+            //default value functions are passed the object instance
+            return instance.age + instance.name;
+        }
+    },
     name: 'text',
     age: 'int'
 }, {
