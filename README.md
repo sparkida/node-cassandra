@@ -478,13 +478,11 @@ var schema = new Cassandra.Schema({
     name: 'text'
 }, {
     primaryKeys: ['username'],
-    with: {
-        compaction: {
-            class: 'DateTieredCompactionStrategy', 
-            timestamp_resolution: 'MICROSECONDS',
-            base_time_seconds: 3600, 
-            max_sstable_age_days: 365
-        }
+    compaction: {
+        class: 'DateTieredCompactionStrategy', 
+        timestamp_resolution: 'MICROSECONDS',
+        base_time_seconds: 3600, 
+        max_sstable_age_days: 365
     }
 });
 
