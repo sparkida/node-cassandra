@@ -17,6 +17,7 @@ Cassandra ORM for NodeJS, based on the ***cassandra-driver*** module.
 - [Getting Started](#user-content-getting-started)
     - [Connecting](#user-content-connecting-to-the-database)
     - [Your first Schema, Model, and Materialized View](#user-content-creating-your-first-schema-model-and-materialized-view)
+- [Table Compaction](#user-content-table-compaction)
 - [Static Methods](#user-content-static-methods)
 - [Working with List Types](#user-content-list-types)
     - [Inserting Lists](#user-content-inserting-lists)
@@ -466,6 +467,28 @@ TestModel.delete(query, deleteObject, (err) => {
 });
 ```
 
+
+Table Compaction
+----------------
+
+```javascript
+//create a new schema
+var schema = new Cassandra.Schema({
+    id: 'uuid',
+    name: 'text'
+}, {
+    primaryKeys: ['username'],
+    with: {
+        compaction: {
+            class: 'DateTieredCompactionStrategy', 
+            timestamp_resolution: 'MICROSECONDS',
+            base_time_seconds: 3600, 
+            max_sstable_age_days: 365
+        }
+    }
+});
+
+```
 
 
 Static Methods
