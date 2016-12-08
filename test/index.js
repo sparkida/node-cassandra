@@ -186,7 +186,7 @@ describe('Cassandra >', function (done) {
                 });
             }, (err) => {
                 return err instanceof Error
-                    && err.message === 'Schema expects have option "primaryKeys" of type array';
+                    && err.message === 'Schema expects to have option "primaryKeys" of type array';
             });
         });
         it ('should throw an error preparing columns if no value if passed', () => {
@@ -380,6 +380,8 @@ describe('Cassandra >', function (done) {
     describe('Model >', () => {
         var testPartition,
             testPartitionModel,
+            testCompaction,
+            testCompactionModel,
             testCompound,
             testCompoundModel,
             testComposite,
@@ -458,6 +460,19 @@ describe('Cassandra >', function (done) {
                 primaryKeys: ['name'],
                 indexes: ['usernames']
             });
+            testCompaction = new Cassandra.Schema({
+                usernames: 'text',
+                name: 'text',
+                age: 'int'
+            }, {
+                primaryKeys: ['name'],
+                compaction: {
+                    class: 'DateTieredCompactionStrategy', 
+                    timestamp_resolution: 'MICROSECONDS',
+                    base_time_seconds: 3600, 
+                    max_sstable_age_days: 365
+                }
+            });
         });
         if (CLEAN) {
             after(() => {
@@ -469,7 +484,8 @@ describe('Cassandra >', function (done) {
                     testListModel.qualifiedName,
                     testOrderByModel.qualifiedName,
                     testSetModel.qualifiedName,
-                    testMapModel.qualifiedName
+                    testMapModel.qualifiedName,
+                    testCompactionModel.qualifiedName
                 ].map((tableName) => {
                     return (next) => cassandra.driver.execute(format('DROP TABLE %s.%s', cassandra.keyspace, tableName), next);
                 }), done);
@@ -506,7 +522,8 @@ describe('Cassandra >', function (done) {
             async.parallel([
                 (next) => testPartitionModel = cassandra.model('testpartition', testPartition, next),
                 (next) => testCompoundModel = cassandra.model('testcompound', testCompound, next),
-                (next) => testCompositeModel = cassandra.model('testcomposite', testComposite, next)
+                (next) => testCompositeModel = cassandra.model('testcomposite', testComposite, next),
+                (next) => testCompactionModel = cassandra.model('testcompaction', testCompaction, next)
             ], done);
         });
         it ('should be able to attach a model to the db instance and create indexes on it', (done) => {
@@ -547,13 +564,23 @@ describe('Cassandra >', function (done) {
                     && err.message === 'Invalid Operator type, not supported: $badOperator';
             });
         });
-        it ('should properly build queries with contains/contains key', () => {
+        it ('should properly build queries with $contains key', () => {
             assert.doesNotThrow(() => {
                 testPartitionModel.model._buildQueryComponents({
                     username: {
                         $contains: 'bar'
                     }
                 });
+            });
+        });
+        it ('should create the table with compaction set to DTCS', (done) => {
+            cassandra.driver.metadata.getTable(cassandra.keyspace, testCompactionModel.name, (err, table) => {
+                if (err) {
+                    return done(err);
+                }
+                assert.equal(table.name, testCompactionModel.name);
+                assert.equal(table.compactionClass, 'org.apache.cassandra.db.compaction.DateTieredCompactionStrategy');
+                done();
             });
         });
         it ('should create a table "testpartition" with a single partition key', (done) => {
