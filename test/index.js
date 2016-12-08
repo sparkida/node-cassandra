@@ -1639,7 +1639,12 @@ describe('Cassandra >', function (done) {
                     type: 'int',
                     default: 50
                 },
-                username: 'text',
+                username: {
+                    type: 'text',
+                    default: (instance) => {
+                        return instance.age + 'foo';
+                    }
+                },
                 testList: {
                     type: {
                         list: 'text'
@@ -1736,6 +1741,14 @@ describe('Cassandra >', function (done) {
                     });
                 assert.equal(user.username, null);
                 assert.equal(user.age, 50, 'did not properly set default age value');
+            });
+            it ('should inherit instance object for fulfilling default value functions', () => {
+                var user = new UserModel({
+                        hex: Cassandra.uuid(),
+                        names: 'baz',
+                        age: 50
+                    });
+                assert.equal(user.username, '50foo');
             });
         });
 
