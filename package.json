@@ -1,5 +1,5 @@
 {
-  "name": "cassandra-orm",
+  "name": "node-cassandra",
   "version": "0.3.9",
   "description": "Cassandra ORM for NodeJS.",
   "homepage": "http://vertebrae-org.github.io/node-cassandra",
@@ -22,27 +22,26 @@
   "bugs": {
     "url": "https://github.com/vertebrae-org/node-cassandra/issues"
   },
+  "author": {
+    "name": "Nick Riley",
+    "email": "nick@sparkida.com",
+    "url": "http://sparkida.com"
+  },
   "dependencies": {
     "async": "^2.1.5",
-    "cassandra-driver": "^3.2.0",
+    "cassandra-driver": "^3.2.0"
+  },
+  "devDependencies": {
     "coveralls": "^2.11.16",
     "grunt": "^1.0.1",
     "grunt-cli": "^1.2.0",
+    "grunt-contrib-jshint": "^1.1.0",
     "grunt-contrib-watch": "^1.0.0",
     "grunt-shell": "^2.1.0",
-    "mocha": "^3.2.0"
-  },
-  "devDependencies": {
-    "coveralls": "*",
-    "grunt": "*",
-    "grunt-cli": "*",
-    "grunt-contrib-jshint": "*",
-    "grunt-contrib-watch": "*",
-    "grunt-shell": "*",
-    "istanbul": "*",
-    "jit-grunt": "*",
-    "jsdoc": "*",
-    "mocha": "*",
-    "time-grunt": "*"
+    "istanbul": "^0.4.5",
+    "jit-grunt": "^0.10.0",
+    "jsdoc": "^3.4.3",
+    "mocha": "^3.2.0",
+    "time-grunt": "^1.4.0"
   }
 }

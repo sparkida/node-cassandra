@@ -1,5 +1,11 @@
 # node-cassandra  [![Build Status][travis-badge]][travis-link] [![Coverage Status][coveralls-badge]][coveralls-link]
 
+###An ORM for Cassandra.
+
+- Provides support for current Cassandra 3.x builds.
+- Tested at scale with distribution in real production environments.
+- Mostly feature-complete, active development is underway to add remaining features.
+- Open to suggestions! Just create an issue and tag it.
 
 <!-- badge image references -->
 
@@ -9,7 +15,6 @@
 [coveralls-badge]: https://coveralls.io/repos/github/vertebrae-org/node-cassandra/badge.svg?branch=master
 [coveralls-link]: https://coveralls.io/github/vertebrae-org/node-cassandra?branch=master
 
-Cassandra ORM for NodeJS, based on the ***cassandra-driver*** module.
 
 **Read the** [full API Documentation](http://vertebrae-org.github.io/node-cassandra).
 
@@ -90,7 +95,7 @@ var schema = new Cassandra.Schema({
     },
     ageName: {
         type: 'text',
-        default: (instance) => { 
+        default: (instance) => {
             //default value functions are passed the object instance
             return instance.age + instance.name;
         }
@@ -481,9 +486,9 @@ var schema = new Cassandra.Schema({
 }, {
     primaryKeys: ['username'],
     compaction: {
-        class: 'DateTieredCompactionStrategy', 
+        class: 'DateTieredCompactionStrategy',
         timestamp_resolution: 'MICROSECONDS',
-        base_time_seconds: 3600, 
+        base_time_seconds: 3600,
         max_sstable_age_days: 365
     }
 });
@@ -517,7 +522,7 @@ var schema = new Cassandra.Schema({
 
 //attach static method - fat arrow functions won't work here as we need the context to change
 schema.statics.findByName = function (name, callback) {
-    this.views.byName.findOne({name: name}, callback);  
+    this.views.byName.findOne({name: name}, callback);
 };
 
 //create model
