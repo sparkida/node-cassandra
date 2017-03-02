@@ -5,12 +5,11 @@ module.exports = (grunt) => {
     var config = {
             pkg: grunt.file.readJSON('package.json'),
             shell: {
-                buildDocs: 'rm -rf docs && ./node_modules/.bin/jsdoc -c jsdoc.json',
                 lcov: {
                     options: {
                         stdout: true
                     },
-                    command: 'rm -rf ./coverage; ./node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec --recursive'
+                    command: 'rm -rf ./coverage; istanbul cover _mocha --report lcovonly -- -R spec --recursive'
                 },
                 report: {
                     options: {
@@ -60,6 +59,5 @@ module.exports = (grunt) => {
     grunt.loadNpmTasks('grunt-shell');
 
     grunt.registerTask('default', ['watch:build']);
-    grunt.registerTask('docs', ['shell:buildDocs']);
     grunt.registerTask('test', ['jshint', 'shell:lcov']);
 };

@@ -14,15 +14,16 @@ before_install:
         cassandra -f
   - sleep 10
 script:
-  - ./node_modules/.bin/grunt test
+  - npm run grunt
 after_success:
   - npm run report
 node_js:
-  - '7.2.1'
+  - '7.7.1'
+  - '7.6.0'
   - '7.0.0'
-  - '6.6.0'
-  - '6.4.0'
-  - '5.10.1'
+  - '6.10.0'
+  - '6.0.0'
+  - '5.12.0'
   - '5.0.0'
 git:
   depth: 3

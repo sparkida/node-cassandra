@@ -38,19 +38,14 @@ Cassandra ORM for NodeJS, based on the ***cassandra-driver*** module.
 
 
 <h4>Cassandra Known Versions Supported:</h4>
-  - 3.0.4
-  - 3.4
 
-<h4>NodeJS Versions Supported:</h4>
-  - 5.8.0
-  - 5.7.1
-  - 5.6.0
-  - 5.5.0
-  - 5.4.1
-  - 5.3.0
-  - 5.2.0
-  - 5.1.1
-  - 5.0.0
+  - 3.x
+
+<h4>Known Supported NodeJS Versions:</h4>
+
+  - <= 7.6
+  - 6.x
+  - 5.x
 
 
 
