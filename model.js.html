@@ -178,8 +178,12 @@ class Model {
                 //$eq $gt $gte etc...
                 let mappedOperator = OperatorMap[operator];
                 if (mappedOperator) {
-                    where.push(column + mappedOperator + '=?');
-                    values.push(value[operator]);
+                    if (value[operator] instanceof Cassandra.Timeuuid) {
+                        where.push(column + mappedOperator + value[operator].value);
+                    } else {
+                        where.push(column + mappedOperator + '?');
+                        values.push(value[operator]);
+                    }
                 } else {
                     //in, contains, contains key
                     mappedOperator = FilterMap[operator];
@@ -309,6 +313,17 @@ class AbstractModel {
                 model.qualifiedName
             );
         }
+        let processResult;
+        //this may seem like overkill, but we want to separate
+        //as much logic out of the iterator as possible when
+        //using the eachRow method
+        let dataMap = model.schema.dataMap;
+        let rowKeys;
+        if (projection) {
+            rowKeys = projection;
+        } else {
+            rowKeys = model.schema.columnIndex;
+        }
         if (options) {
             if (options.__$$findOne) {
                 findOne = true;
@@ -322,39 +337,76 @@ class AbstractModel {
             if (options.raw) {
                 raw = !!options.raw;
             }
-        }
-        cassandra.driver.execute(query, queryComponents.values, {prepare: true}, (err, result) => {
-            if (err) {
-                return callback(err);
+            if (options.stream) {
+                return cassandra.driver.stream(query, queryComponents.values);
             }
-            if (!result.rows.length) {
-                result = null;
-            } else if (!raw) {
-                let rows = result.rows;
-                let size = result.rowLength;
-                result = new Array(size);
-                for (let i = 0; i &lt; size; i++) {
-                    //create object, bypass defaults/required
-                    result[i] = new Factory(rows[i], true);
+            if (options.eachRow) {
+                processResult = (err, result, n) => {
+                    if (!raw) {
+                        //create object, bypass defaults/required
+                        result = new Factory(result, true);
+                    } else {
+                        for (let key of rowKeys) {
+                            let mapping = dataMap[key];
+                            if (key !== mapping) {
+                                result[mapping] = result[key];
+                                delete result[key];
+                            }
+                        }
+                    }
+                    return options.eachRow(n, result);
+                };
+                let pagingOptions = {
+                    prepare: true
+                };
+                if (undefined !== options.autoPage) {
+                    pagingOptions.autoPage = options.autoPage;
                 }
-            } else {
-                result = result.rows;
-                var dataMap = model.schema.dataMap;
-                let rowKeys = Object.keys(result[0]);
-                for (let row of result) {
-                    for (let key of rowKeys) {
-                        let mapping = dataMap[key];
-                        if (key !== mapping) {
-                            row[mapping] = row[key];
-                            delete row[key];
+                if (undefined !== options.fetchSize) {
+                    pagingOptions.fetchSize = options.fetchSize;
+                }
+                cassandra.driver.eachRow(
+                    query,
+                    queryComponents.values,
+                    pagingOptions,
+                    (n, row) => processResult(null, row, n), //functions to lose Cassandra context
+                    (err, result) => callback(err, result)
+                );
+                return;
+            }
+        }
+        if (!options || !options.eachRow) {
+            processResult = (err, result) => {
+                if (err) {
+                    return callback(err);
+                }
+                if (!result.rows.length) {
+                    result = null;
+                } else if (!raw) {
+                    let rows = result.rows;
+                    let size = result.rowLength;
+                    result = new Array(size);
+                    for (let i = 0; i &lt; size; i++) {
+                        //create object, bypass defaults/required
+                        result[i] = new Factory(rows[i], true);
+                    }
+                } else {
+                    result = result.rows;
+                    for (let row of result) {
+                        for (let key of rowKeys) {
+                            let mapping = dataMap[key];
+                            if (key !== mapping) {
+                                row[mapping] = row[key];
+                                delete row[key];
+                            }
                         }
                     }
                 }
-            }
-            callback(null, result);
-        });
+                callback(null, result);
+            };
+        }
+        cassandra.driver.execute(query, queryComponents.values, {prepare: true}, processResult);
     }
-
 
     /**
      * Update items in the model's column family
@@ -519,12 +571,10 @@ class AbstractModel {
         options.limit = 1;
         options.__$$findOne = true;
         AbstractModel.prototype.find.apply(this, [queryObject, projection, options, (err, result) => {
-            if (!err &amp;&amp; result) {
+            if (Array.isArray(result)) {
                 result = result.shift();
-                callback(null, result);
-            } else {
-                callback(err);
             }
+            callback(err, result);
         }].filter(Boolean));
     }
 
@@ -562,7 +612,7 @@ module.exports = Model;
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Tue Mar 29 2016 14:22:26 GMT-0700 (PDT)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Thu Mar 02 2017 08:25:19 GMT-0800 (PST)
 </footer>
 
 <script> prettyPrint(); </script>
