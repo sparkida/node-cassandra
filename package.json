@@ -1,6 +1,6 @@
 {
   "name": "node-cassandra",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "description": "Cassandra ORM for NodeJS.",
   "homepage": "http://vertebrae-org.github.io/node-cassandra",
   "main": "index.js",

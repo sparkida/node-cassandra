@@ -564,6 +564,15 @@ describe('Cassandra >', function (done) {
                     && err.message === 'Invalid Operator type, not supported: $badOperator';
             });
         });
+        it ('should qualify a query object if it has "undefined" values', () => {
+            assert.doesNotThrow(() => {
+                let query = testPartitionModel.model._buildQueryComponents({
+                    username: undefined,
+                    age: 20
+                });
+                assert.equal(query.where, 'age=?', 'did not return expected query');
+            });
+        });
         it ('should properly build queries with $contains key', () => {
             assert.doesNotThrow(() => {
                 testPartitionModel.model._buildQueryComponents({
