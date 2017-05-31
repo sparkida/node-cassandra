@@ -138,6 +138,7 @@ var test = new TestModel({
 <h3>Working with Collections and Indexes</h3>
 
 <h4>List Types</h4>
+
 ```javascript
 //create a new schema
 var schema = new Cassandra.Schema({
@@ -154,6 +155,7 @@ var schema = new Cassandra.Schema({
 ```
 
 <h5>Inserting lists</h5>
+
 ```javascript
 //create model
 var TestModel = cassandra.model('testModel', schema, (err) => {
@@ -174,6 +176,7 @@ var TestModel = cassandra.model('testModel', schema, (err) => {
 ```
 
 <h5>Updating lists</h5>
+
 ```javascript
 //following above
 var query = {
@@ -200,6 +203,7 @@ TestModel.update(query, updateObject, (err) => {
 ```
 
 <h5>Updating lists by index</h5>
+
 ```javascript
 //following above
 var query = {
@@ -226,6 +230,7 @@ TestModel.update(query, updateObject, (err) => {
 ```
 
 <h5>Deleting lists by column or index</h5>
+
 ```javascript
 //following above
 var query = {
@@ -259,6 +264,7 @@ TestModel.delete(query, deleteObject, (err) => {
 
 
 <h4>Set Types</h4>
+
 ```javascript
 //create a new schema
 var schema = new Cassandra.Schema({
@@ -275,6 +281,7 @@ var schema = new Cassandra.Schema({
 ```
 
 <h5>Inserting sets</h5>
+
 ```javascript
 //create model
 var TestModel = cassandra.model('testModel', schema, (err) => {
@@ -295,6 +302,7 @@ var TestModel = cassandra.model('testModel', schema, (err) => {
 ```
 
 <h5>Updating sets</h5>
+
 ```javascript
 //following above
 var query = {
@@ -320,6 +328,7 @@ TestModel.update(query, updateObject, (err) => {
 ```
 
 <h5>Update sets to null</h5>
+
 ```javascript
 //following above
 var query = {
@@ -342,6 +351,7 @@ TestModel.update(query, updateObject, (err) => {
 ```
 
 <h5>Deleting sets</h5>
+
 ```javascript
 //not much you can do with deleting sets
 var query = {
@@ -365,6 +375,7 @@ TestModel.delete(query, deleteObject, (err) => {
 
 
 <h4>Map Types</h4>
+
 ```javascript
 //create a new schema
 var schema = new Cassandra.Schema({
@@ -381,6 +392,7 @@ var schema = new Cassandra.Schema({
 ```
 
 <h5>Inserting maps</h5>
+
 ```javascript
 //create model
 var TestModel = cassandra.model('testModel', schema, (err) => {
@@ -406,6 +418,7 @@ var TestModel = cassandra.model('testModel', schema, (err) => {
 ```
 
 <h5>Updating maps</h5>
+
 ```javascript
 //following above
 var query = {
@@ -431,6 +444,7 @@ TestModel.update(query, updateObject, (err) => {
 ```
 
 <h5>Deleting maps by Keys</h5>
+
 ```javascript
 //not much you can do with deleting maps
 var query = {
@@ -453,6 +467,7 @@ TestModel.delete(query, deleteObject, (err) => {
 ```
 
 <h5>Deleting maps</h5>
+
 ```javascript
 //not much you can do with deleting maps
 var query = {
