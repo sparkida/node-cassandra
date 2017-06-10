@@ -1,6 +1,6 @@
 # node-cassandra  [![Build Status][travis-badge]][travis-link] [![Coverage Status][coveralls-badge]][coveralls-link]
 
-###An ORM for Cassandra.
+<h2>An ORM for Cassandra</h2>
 
 - Provides support for current Cassandra 3.x builds.
 - Tested at scale with distribution in real production environments.
