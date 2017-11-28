@@ -17,8 +17,8 @@ const keyspaceConfig = {
     durableWrites: true
 };
 const config = {
-    contactPoints: ['127.0.0.1'],
-    protocolOptions: {port: 9042},
+    contactPoints: [process.env.CASSANDRA_HOST || '127.0.0.1'],
+    protocolOptions: {port: process.env.CASSANDRA_PORT || 9042},
     keyspace: {}
 };
 
