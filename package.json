@@ -1,8 +1,8 @@
 {
   "name": "node-cassandra",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "description": "Cassandra ORM for NodeJS.",
-  "homepage": "http://vertebrae-org.github.io/node-cassandra",
+  "homepage": "http://sparkida.github.io/node-cassandra",
   "main": "index.js",
   "scripts": {
     "test": "mocha --recursive --reporter spec --bail",
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vertebrae-org/node-cassandra.git"
+    "url": "git+https://github.com/sparkida/node-cassandra.git"
   },
   "keywords": [
     "cassandra",
@@ -20,7 +20,7 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vertebrae-org/node-cassandra/issues"
+    "url": "https://github.com/sparkida/node-cassandra/issues"
   },
   "author": {
     "name": "Nick Riley",

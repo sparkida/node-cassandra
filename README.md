@@ -548,33 +548,3 @@ var TestModel = cassandra.model('testModel', schema, (err) => {
 });
 ```
 
-Stress Utility
---------------
-node-cassandra includes an interactive command line utility.
-
-* read - make n asynchronous read requests, with n iterations
-* write - make multiple write requests, creates fake user data
-* load - make n read requests per second (randomized timing), with n iterations
-* count - count how many rows you have created with the write command
-* clean - drop the keyspace and exit
-* help - display the help text below
-
-running `node ./stress --help`
-
-```
-NODE-CASSANDRA STRESS UTILITY
-
-  SYNOPSIS
-      node ./stress [OPTIONS]
-
-  OPTIONS
-      --host           cassandra host address (default=127.0.0.1)
-      --port           cassandra listen port (default=9042)
-      --keyspace       cassandra table keyspace (default=loadtest)
-      --cluster        run tests in cluster mode
-      --nodes          number of nodes to spawn in cluster mode (default=numCPUs)
-      --help           show this help
-```
-
-* Setting "--cluster" will start the cli in cluster mode.  By default, one node will fork for each CPU core.  You can manually set the number of forks with "--nodes" option.
-* In cluster mode read, write, and load tests will be performed in parallel on each node.  If you have 4 nodes running, then write 1000 rows, you will be writing 4000 rows to the database.
